@@ -5,12 +5,32 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 10 10 11;
+    --foreground: 242 240 235;
+    --accent: 212 162 76;
+    --accent-secondary: 179 59 30;
+    --muted: 107 107 107;
+    --card: 20 20 22;
+    --border: 42 42 44;
+  }
+
+  .light {
+    --background: 245 245 247;
+    --foreground: 20 20 22;
+    --accent: 212 162 76;
+    --accent-secondary: 179 59 30;
+    --muted: 100 100 105;
+    --card: 255 255 255;
+    --border: 220 220 225;
+  }
+
   html {
     scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground font-body antialiased transition-colors duration-500;
   }
 
   ::selection {

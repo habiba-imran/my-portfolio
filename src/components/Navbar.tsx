@@ -1,6 +1,7 @@
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
+import { useTheme } from '../context/ThemeContext';
 
 const navLinks = [
   { name: 'About', href: '#about' },
@@ -68,6 +69,7 @@ const NavLink = memo(function NavLink({ name, href }: { name: string; href: stri
 
 const Navbar = memo(function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50" role="navigation" aria-label="Main navigation">
@@ -81,29 +83,39 @@ const Navbar = memo(function Navbar() {
             Habiba Imran
           </a>
 
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <NavLink key={link.name} name={link.name} href={link.href} />
-            ))}
-            <a
-              href="/Umm-e-Habiba-Imran-CV.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-5 py-2.5 text-sm font-medium text-background bg-accent hover:bg-accent/90 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(212,162,76,0.4)] rounded-full transition-all duration-300"
-            >
-              Download CV
-            </a>
-          </div>
+          <div className="flex items-center gap-2 md:gap-8">
+            <div className="hidden md:flex items-center gap-8">
+              {navLinks.map((link) => (
+                <NavLink key={link.name} name={link.name} href={link.href} />
+              ))}
+              <a
+                href="/Umm-e-Habiba-Imran-CV.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-2.5 text-sm font-medium text-background bg-accent hover:bg-accent/90 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(212,162,76,0.4)] rounded-full transition-all duration-300"
+              >
+                Download CV
+              </a>
+            </div>
 
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-foreground hover:text-accent transition-colors duration-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-expanded={isOpen}
-            aria-controls="mobile-menu"
-            aria-label={isOpen ? 'Close menu' : 'Open menu'}
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-muted hover:text-accent transition-colors duration-200 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              aria-label={theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="md:hidden p-2 text-foreground hover:text-accent transition-colors duration-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu"
+              aria-label={isOpen ? 'Close menu' : 'Open menu'}
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {isOpen && (

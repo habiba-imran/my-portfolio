@@ -4,13 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0A0A0B',
-        foreground: '#F2F0EB',
-        accent: '#D4A24C',
-        'accent-secondary': '#B33B1E',
-        muted: '#6B6B6B',
-        card: '#141416',
-        border: '#2A2A2C',
+        background: 'rgb(var(--background) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        'accent-secondary': 'rgb(var(--accent-secondary) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        card: 'rgb(var(--card) / <alpha-value>)',
+        border: 'rgb(var(--border) / <alpha-value>)',
       },
       fontFamily: {
         display: ['Plus Jakarta Sans', 'sans-serif'],
