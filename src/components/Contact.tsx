@@ -1,6 +1,24 @@
 import { useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 import { Mail, Github, Linkedin, ArrowUpRight } from 'lucide-react';
+import { useTextReveal } from '../hooks/useTextReveal';
+
+function AnimatedHeadline({ children }: { children: string }) {
+  const sectionRef = useTextReveal('.reveal-word', '#contact');
+  const words = children.split(' ');
+
+  return (
+    <h2 id="contact-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-5 md:mb-6 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 cursor-default" style={{ overflow: 'hidden' }}>
+      <span className="inline-flex flex-wrap justify-center">
+        {words.map((word, i) => (
+          <span key={i} className="reveal-word inline-block mr-[0.25em]">
+            {word}
+          </span>
+        ))}
+      </span>
+    </h2>
+  );
+}
 
 const MagneticButton = memo(function MagneticButton({ children, className }: { children: React.ReactNode; className?: string }) {
   const buttonRef = useRef<HTMLSpanElement>(null);
@@ -61,10 +79,8 @@ const Contact = memo(function Contact() {
         <span className="text-accent font-medium text-sm uppercase tracking-wider">
           Contact
         </span>
-        <h2 id="contact-heading" className="font-display text-display-lg text-foreground font-bold mt-4 mb-5 md:mb-6 reveal-headline">
-          Let's Build Something Together
-        </h2>
-        <p className="text-base md:text-xl text-muted leading-relaxed mb-10 md:mb-12 max-w-2xl mx-auto">
+        <AnimatedHeadline>Let's Build Something Together</AnimatedHeadline>
+        <p className="text-base md:text-lg text-muted leading-relaxed mb-6 md:mb-8 max-w-2xl mx-auto">
           I'm currently looking for summer internship opportunities and interesting
           projects to collaborate on. If you have an idea or opportunity, I'd love to hear from you.
         </p>
@@ -72,7 +88,7 @@ const Contact = memo(function Contact() {
         <div className="flex flex-col items-center gap-8">
           <MagneticButton className="inline-flex items-center">
             <a
-              href="mailto:alex.chen@stanford.edu"
+              href="mailto:habiba.imran@example.com"
               data-cursor-hover
               className="group inline-flex items-center gap-3 px-7 md:px-8 py-3.5 md:py-4 bg-accent text-background font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
@@ -84,7 +100,7 @@ const Contact = memo(function Contact() {
 
           <div className="flex items-center gap-5 md:gap-6">
             <a
-              href="https://github.com/alexchen"
+              href="https://github.com/habiba-imran"
               target="_blank"
               rel="noopener noreferrer"
               data-cursor-hover
@@ -94,7 +110,7 @@ const Contact = memo(function Contact() {
               <Github size={20} aria-hidden="true" />
             </a>
             <a
-              href="https://linkedin.com/in/alexchen"
+              href="https://linkedin.com/in/habiba-imran"
               target="_blank"
               rel="noopener noreferrer"
               data-cursor-hover

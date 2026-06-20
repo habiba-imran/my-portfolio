@@ -124,14 +124,14 @@ export default function Preloader({ onComplete }: PreloaderProps) {
           className="inline-block text-accent"
           style={{ willChange: 'transform, opacity' }}
         >
-          A
+          H
         </span>
         <span
           ref={letterCRef}
           className="inline-block"
           style={{ willChange: 'transform, opacity' }}
         >
-          C
+          I
         </span>
       </div>
       <p className="absolute bottom-8 text-xs text-muted uppercase tracking-widest">

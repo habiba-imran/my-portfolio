@@ -1,6 +1,24 @@
 import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 import { ExternalLink } from 'lucide-react';
+import { useTextReveal } from '../hooks/useTextReveal';
+
+function AnimatedHeadline({ children }: { children: string }) {
+  const sectionRef = useTextReveal('.reveal-word', '#projects');
+  const words = children.split(' ');
+
+  return (
+    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+      <span className="inline-flex flex-wrap">
+        {words.map((word, i) => (
+          <span key={i} className="reveal-word inline-block mr-[0.25em]">
+            {word}
+          </span>
+        ))}
+      </span>
+    </h2>
+  );
+}
 
 const projects = [
   {
@@ -108,7 +126,7 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
         ref={glowRef}
         className="pointer-events-none absolute inset-0 opacity-0 bg-gradient-to-br from-accent/15 to-transparent rounded-lg transition-opacity"
       />
-      <h3 className="font-display text-xl md:text-2xl text-foreground font-semibold mb-3 md:mb-4">
+      <h3 className="font-display text-lg md:text-xl text-foreground font-semibold mb-3 md:mb-4">
         {project.title}
       </h3>
       <p className="text-muted leading-relaxed mb-4 md:mb-6 text-sm md:text-base">
@@ -139,13 +157,11 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
 const Projects = memo(function Projects() {
   return (
     <section id="projects" className="section-padding py-section relative">
-      <div className="mb-10 md:mb-12">
+      <div className="mb-6 md:mb-8">
         <span className="text-accent font-medium text-sm uppercase tracking-wider">
           Projects
         </span>
-        <h2 className="font-display text-display-lg text-foreground font-bold mt-4 reveal-headline">
-          Featured Work
-        </h2>
+        <AnimatedHeadline>Featured Work</AnimatedHeadline>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">

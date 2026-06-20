@@ -1,18 +1,52 @@
 import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
+import { useTextReveal } from '../hooks/useTextReveal';
+
+function AnimatedHeadline({ children }: { children: string }) {
+  const sectionRef = useTextReveal('.reveal-word', '#skills');
+  const words = children.split(' ');
+
+  return (
+    <h2 id="skills-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+      <span className="inline-flex flex-wrap">
+        {words.map((word, i) => (
+          <span key={i} className="reveal-word inline-block mr-[0.25em]">
+            {word}
+          </span>
+        ))}
+      </span>
+    </h2>
+  );
+}
 
 const skillCategories = [
   {
     title: 'Languages',
-    skills: ['TypeScript', 'JavaScript', 'Python', 'Java', 'C++', 'SQL', 'HTML/CSS'],
+    skills: ['Python', 'JavaScript', 'C++', 'SQL', 'Assembly'],
   },
   {
     title: 'Frameworks & Libraries',
-    skills: ['React', 'Next.js', 'Node.js', 'Express', 'Tailwind CSS', 'PostgreSQL', 'MongoDB'],
+    skills: ['FastAPI', 'NestJS', 'React', 'NumPy', 'Pandas'],
+  },
+  {
+    title: 'AI & Voice Technologies',
+    skills: ['LLM Integration', 'Prompt Engineering', 'STT', 'TTS', 'Deepgram', 'ElevenLabs', 'IBM watsonx'],
+  },
+  {
+    title: 'Backend & Infrastructure',
+    skills: ['REST APIs', 'WebSockets', 'Twilio', 'LiveKit'],
+  },
+  {
+    title: 'Databases',
+    skills: ['PostgreSQL', 'Supabase'],
   },
   {
     title: 'Tools',
-    skills: ['Git', 'Docker', 'AWS', 'Figma', 'Linux', 'VS Code', 'Postman'],
+    skills: ['Git', 'GitHub', 'VS Code'],
+  },
+  {
+    title: 'CS Core',
+    skills: ['Data Structures & Algorithms', 'OOP', 'Operating Systems'],
   },
 ];
 
@@ -38,24 +72,56 @@ const Skills = memo(function Skills() {
       repeat: -1,
     });
 
+    let currentDirection = 1;
+
     const handleMouseEnter = () => {
       if (animationRef.current) {
-        gsap.to(animationRef.current, { timeScale: 0.3, duration: 0.4, ease: 'power2.out' });
+        gsap.to(animationRef.current, { timeScale: currentDirection * 0.3, duration: 0.4, ease: 'power2.out' });
+      }
+      
+      // Flash text to yellow sequentially on hover
+      if (trackRef.current) {
+        gsap.fromTo(
+          trackRef.current.children,
+          { color: '#D4A24C' },
+          { color: '', duration: 0.8, stagger: 0.02, ease: 'power2.out', overwrite: 'auto' }
+        );
       }
     };
 
     const handleMouseLeave = () => {
       if (animationRef.current) {
-        gsap.to(animationRef.current, { timeScale: 1, duration: 0.4, ease: 'power2.out' });
+        gsap.to(animationRef.current, { timeScale: currentDirection * 1, duration: 0.4, ease: 'power2.out' });
+      }
+    };
+
+    const handleClick = () => {
+      if (animationRef.current) {
+        currentDirection *= -1;
+        
+        // Zippy burst in the new direction
+        // Set immediately to high speed
+        animationRef.current.timeScale(currentDirection * 8);
+        
+        // Then smoothly decelerate back to hover speed
+        gsap.to(animationRef.current, {
+          timeScale: currentDirection * 0.3, 
+          duration: 1.5, 
+          ease: 'power3.out',
+          overwrite: true // Ensure it overrides any existing hover tweens
+        });
+
       }
     };
 
     marquee.addEventListener('mouseenter', handleMouseEnter);
     marquee.addEventListener('mouseleave', handleMouseLeave);
+    marquee.addEventListener('click', handleClick);
 
     return () => {
       marquee.removeEventListener('mouseenter', handleMouseEnter);
       marquee.removeEventListener('mouseleave', handleMouseLeave);
+      marquee.removeEventListener('click', handleClick);
       if (animationRef.current) {
         animationRef.current.kill();
       }
@@ -67,25 +133,23 @@ const Skills = memo(function Skills() {
   return (
     <section id="skills" className="section-padding py-section bg-card/30 overflow-hidden" aria-labelledby="skills-heading">
       <div className="max-w-6xl">
-        <div className="mb-10 md:mb-12">
+        <div className="mb-6 md:mb-8">
           <span className="text-accent font-medium text-sm uppercase tracking-wider">
             Skills
           </span>
-          <h2 id="skills-heading" className="font-display text-display-lg text-foreground font-bold mt-4 reveal-headline">
-            What I Work With
-          </h2>
+          <AnimatedHeadline>What I Work With</AnimatedHeadline>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 mb-12 md:mb-16">
           {skillCategories.map((category) => (
             <div key={category.title} className="space-y-3 md:space-y-4">
-              <h3 className="font-display text-lg md:text-2xl text-foreground font-semibold">
+              <h3 className="font-display text-base md:text-lg text-foreground font-semibold">
                 {category.title}
               </h3>
               <ul className="flex flex-wrap gap-2" role="list">
                 {category.skills.map((skill) => (
                   <li key={skill}>
-                    <span className="px-3 md:px-4 py-1.5 md:py-2 bg-background border border-border rounded-full text-xs md:text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors duration-200">
+                    <span className="px-3 md:px-4 py-1.5 md:py-2 bg-background border border-border rounded-full text-xs md:text-sm text-muted hover:text-foreground hover:border-accent/50 hover:shadow-[0_0_12px_rgba(212,162,76,0.15)] hover:scale-105 transition-all duration-200 inline-block cursor-default">
                       {skill}
                     </span>
                   </li>
@@ -98,7 +162,7 @@ const Skills = memo(function Skills() {
 
       <div
         ref={marqueeRef}
-        className="relative"
+        className="relative cursor-pointer select-none group"
         style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
         aria-hidden="true"
       >
@@ -106,7 +170,7 @@ const Skills = memo(function Skills() {
           {[...allSkills, ...allSkills].map((skill, i) => (
             <span
               key={i}
-              className="px-6 md:px-8 py-3 md:py-4 text-lg md:text-2xl font-display font-medium text-muted/30 whitespace-nowrap"
+              className="px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-display font-medium text-muted/30 whitespace-nowrap group-hover:text-muted/50 transition-colors duration-300"
             >
               {skill}
             </span>

@@ -38,7 +38,6 @@ export function useTextReveal(selector: string, trigger?: string) {
 
     return () => {
       tl.kill();
-      ScrollTrigger.getAll().forEach(st => st.kill());
     };
   }, [selector, trigger]);
 

@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Lenis from '@studio-freight/lenis';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import About from './components/About';
@@ -25,65 +24,6 @@ function App() {
     setIsLoaded(true);
   }, []);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (!prefersReducedMotion) {
-      const lenis = new Lenis({
-        duration: 1.2,
-        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        orientation: 'vertical',
-        gestureOrientation: 'vertical',
-        smoothWheel: true,
-      });
-
-      lenis.on('scroll', ScrollTrigger.update);
-
-      gsap.ticker.add((time) => {
-        lenis.raf(time * 1000);
-      });
-
-      gsap.ticker.lagSmoothing(0);
-
-      return () => {
-        lenis.destroy();
-        ScrollTrigger.getAll().forEach(st => st.kill());
-      };
-    }
-
-    return () => {};
-  }, [isLoaded, prefersReducedMotion]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (prefersReducedMotion) return;
-
-    const headlines = document.querySelectorAll('.reveal-headline');
-    headlines.forEach(headline => {
-      const words = headline.textContent?.split(' ') || [];
-      headline.innerHTML = words.map(word => `<span class="headline-word inline-block mr-[0.25em]">${word}</span>`).join('');
-
-      gsap.set(headline.querySelectorAll('.headline-word'), { y: 40, opacity: 0 });
-
-      gsap.to(headline.querySelectorAll('.headline-word'), {
-        y: 0,
-        opacity: 1,
-        duration: 0.6,
-        stagger: 0.04,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: headline,
-          start: 'top 85%',
-          toggleActions: 'play none none none',
-        },
-      });
-    });
-
-    return () => {
-      ScrollTrigger.getAll().forEach(st => st.kill());
-    };
-  }, [isLoaded, prefersReducedMotion]);
 
   if (!isLoaded) {
     return <Preloader onComplete={handlePreloaderComplete} />;
@@ -94,15 +34,27 @@ function App() {
       <Cursor />
       <div className="noise-overlay" aria-hidden="true" />
 
+      {/* Ambient background effects */}
+      <div className="dot-grid" aria-hidden="true" />
+      <div className="ambient-blob ambient-blob--gold" aria-hidden="true" />
+      <div className="ambient-blob ambient-blob--rust" aria-hidden="true" />
+      <div className="ambient-blob ambient-blob--subtle" aria-hidden="true" />
+
       <Navbar />
       <main id="main-content">
         <Hero />
+        <hr className="section-divider" />
         <About />
+        <hr className="section-divider" />
         <Skills />
+        <hr className="section-divider" />
         <Projects />
+        <hr className="section-divider" />
         <Experience />
+        <hr className="section-divider" />
         <Contact />
       </main>
+      <hr className="section-divider" />
       <Footer />
     </div>
   );

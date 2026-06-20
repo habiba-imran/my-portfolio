@@ -6,7 +6,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   const words = children.split(' ');
 
   return (
-    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4" style={{ overflow: 'hidden' }}>
+    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -30,7 +30,7 @@ export default function About() {
         </div>
 
         <div className="lg:col-span-8 lg:col-start-6">
-          <div className="space-y-6 text-lg md:text-xl text-muted leading-relaxed">
+          <div className="space-y-6 text-base md:text-lg text-muted leading-relaxed">
             <p>
               I'm a junior at Stanford University studying Computer Science with a concentration
               in Human-Computer Interaction. My journey into programming started in high school

@@ -6,7 +6,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   const words = children.split(' ');
 
   return (
-    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4" style={{ overflow: 'hidden' }}>
+    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -21,31 +21,24 @@ function AnimatedHeadline({ children }: { children: string }) {
 const experiences = [
   {
     id: 1,
-    title: 'Software Engineering Intern',
-    company: 'Google',
-    period: 'Summer 2025',
-    description: 'Developed microservices for Google Cloud Platform, improving API response times by 40%. Collaborated with a team of 8 engineers on distributed systems architecture.',
+    title: 'Software Developer (Promoted from AI Intern)',
+    company: 'Finova Solutions',
+    period: 'April 2026 – Ongoing',
+    description: 'Contributed in building full-stack SaaS features across dashboard, backend APIs, and configuration flows for AI-powered voice and call evaluation products.',
   },
   {
     id: 2,
-    title: 'Full-Stack Developer',
-    company: 'Stanford Digital Library',
-    period: '2024 - Present',
-    description: 'Building digital archive interfaces for historical document collections. Implementing search functionality with Elasticsearch and creating accessible UI components.',
+    title: 'AI Intern',
+    company: 'Finova Solutions',
+    period: 'February 2026 – April 2026',
+    description: 'Developed a production voice AI agent pipeline handling call input, LLM processing, and TTS output for real-world phone-call automation workflows.',
   },
   {
     id: 3,
-    title: 'Teaching Assistant',
-    company: 'Stanford CS106B',
-    period: 'Fall 2024',
-    description: 'Led weekly discussion sections for 50+ students in Data Structures & Algorithms. Held office hours and assisted with grading and curriculum development.',
-  },
-  {
-    id: 4,
-    title: 'Bachelor of Science in Computer Science',
-    company: 'Stanford University',
-    period: '2022 - 2026',
-    description: "Concentration in Human-Computer Interaction. GPA: 3.85. Dean's List all quarters. Member of Stanford ACM and Women in Computer Science.",
+    title: 'AI Intern',
+    company: 'SPS-NASTP',
+    period: 'July 2025 – Sept 2025',
+    description: 'Built GreenKeyper, a conversational AI app using IBM Watsonx AI Assistant, covering chatbot logic and assistant configuration for real-world interaction design.',
   },
 ];
 
