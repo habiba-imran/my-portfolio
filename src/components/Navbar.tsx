@@ -1,5 +1,5 @@
 import { Menu, X } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 
 const navLinks = [
@@ -10,7 +10,7 @@ const navLinks = [
   { name: 'Contact', href: '#contact' },
 ];
 
-function NavLink({ name, href }: { name: string; href: string }) {
+const NavLink = memo(function NavLink({ name, href }: { name: string; href: string }) {
   const linkRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ function NavLink({ name, href }: { name: string; href: string }) {
       gsap.to(link, {
         x: deltaX,
         y: deltaY,
-        duration: 0.4,
+        duration: 0.3,
         ease: 'power2.out',
       });
     };
@@ -41,7 +41,7 @@ function NavLink({ name, href }: { name: string; href: string }) {
         x: 0,
         y: 0,
         duration: 0.4,
-        ease: 'elastic.out(1, 0.5)',
+        ease: 'power2.out',
       });
     };
 
@@ -51,6 +51,7 @@ function NavLink({ name, href }: { name: string; href: string }) {
     return () => {
       link.removeEventListener('mousemove', handleMouseMove);
       link.removeEventListener('mouseleave', handleMouseLeave);
+      gsap.killTweensOf(link);
     };
   }, []);
 
@@ -58,21 +59,25 @@ function NavLink({ name, href }: { name: string; href: string }) {
     <a
       ref={linkRef}
       href={href}
-      className="text-sm font-medium text-muted hover:text-accent transition-colors duration-200"
+      className="text-sm font-medium text-muted hover:text-accent transition-colors duration-200 px-1 -mx-1"
     >
       {name}
     </a>
   );
-}
+});
 
-export default function Navbar() {
+const Navbar = memo(function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50" role="navigation" aria-label="Main navigation">
       <div className="section-padding">
         <div className="flex items-center justify-between h-16 md:h-20">
-          <a href="#" className="font-display font-semibold text-lg text-foreground">
+          <a
+            href="#"
+            className="font-display font-semibold text-lg text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+            aria-label="Alex Chen - Home"
+          >
             Alex Chen
           </a>
 
@@ -84,22 +89,24 @@ export default function Navbar() {
 
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-foreground"
-            aria-label="Toggle menu"
+            className="md:hidden p-2 text-foreground hover:text-accent transition-colors duration-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            aria-expanded={isOpen}
+            aria-controls="mobile-menu"
+            aria-label={isOpen ? 'Close menu' : 'Open menu'}
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-border/50">
+          <div id="mobile-menu" className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <a
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="text-sm font-medium text-muted hover:text-accent transition-colors duration-200"
+                  className="text-sm font-medium text-muted hover:text-accent transition-colors duration-200 py-2 px-1 -mx-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   {link.name}
                 </a>
@@ -110,4 +117,6 @@ export default function Navbar() {
       </div>
     </nav>
   );
-}
+});
+
+export default Navbar;

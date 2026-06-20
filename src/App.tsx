@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from '@studio-freight/lenis';
@@ -11,12 +11,22 @@ import Experience from './components/Experience';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Cursor from './components/Cursor';
+import Preloader from './components/Preloader';
 
 gsap.registerPlugin(ScrollTrigger);
 
 function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const prefersReducedMotion = typeof window !== 'undefined'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+
+  const handlePreloaderComplete = useCallback(() => {
+    setIsLoaded(true);
+  }, []);
+
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!isLoaded) return;
 
     if (!prefersReducedMotion) {
       const lenis = new Lenis({
@@ -42,10 +52,10 @@ function App() {
     }
 
     return () => {};
-  }, []);
+  }, [isLoaded, prefersReducedMotion]);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!isLoaded) return;
 
     if (prefersReducedMotion) return;
 
@@ -59,12 +69,12 @@ function App() {
       gsap.to(headline.querySelectorAll('.headline-word'), {
         y: 0,
         opacity: 1,
-        duration: 0.8,
-        stagger: 0.05,
-        ease: 'power3.out',
+        duration: 0.6,
+        stagger: 0.04,
+        ease: 'power2.out',
         scrollTrigger: {
           trigger: headline,
-          start: 'top 80%',
+          start: 'top 85%',
           toggleActions: 'play none none none',
         },
       });
@@ -73,7 +83,11 @@ function App() {
     return () => {
       ScrollTrigger.getAll().forEach(st => st.kill());
     };
-  }, []);
+  }, [isLoaded, prefersReducedMotion]);
+
+  if (!isLoaded) {
+    return <Preloader onComplete={handlePreloaderComplete} />;
+  }
 
   return (
     <div className="relative min-h-screen">
@@ -81,7 +95,7 @@ function App() {
       <div className="noise-overlay" aria-hidden="true" />
 
       <Navbar />
-      <main>
+      <main id="main-content">
         <Hero />
         <About />
         <Skills />

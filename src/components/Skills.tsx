@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 
 const skillCategories = [
@@ -16,17 +16,14 @@ const skillCategories = [
   },
 ];
 
-export default function Skills() {
+const Skills = memo(function Skills() {
   const marqueeRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (prefersReducedMotion) {
-      (marqueeRef.current?.querySelector('.marquee-track') as HTMLElement)?.classList.add('paused');
-      return;
-    }
+    if (prefersReducedMotion) return;
 
     const marquee = marqueeRef.current;
     const track = trackRef.current;
@@ -34,19 +31,23 @@ export default function Skills() {
 
     const totalWidth = track.scrollWidth / 2;
 
-    gsap.to(track, {
+    animationRef.current = gsap.to(track, {
       x: -totalWidth,
-      duration: 40,
+      duration: 35,
       ease: 'none',
       repeat: -1,
     });
 
     const handleMouseEnter = () => {
-      gsap.to(track, { timeScale: 0.3, duration: 0.5 });
+      if (animationRef.current) {
+        gsap.to(animationRef.current, { timeScale: 0.3, duration: 0.4, ease: 'power2.out' });
+      }
     };
 
     const handleMouseLeave = () => {
-      gsap.to(track, { timeScale: 1, duration: 0.5 });
+      if (animationRef.current) {
+        gsap.to(animationRef.current, { timeScale: 1, duration: 0.4, ease: 'power2.out' });
+      }
     };
 
     marquee.addEventListener('mouseenter', handleMouseEnter);
@@ -55,51 +56,57 @@ export default function Skills() {
     return () => {
       marquee.removeEventListener('mouseenter', handleMouseEnter);
       marquee.removeEventListener('mouseleave', handleMouseLeave);
-      gsap.killTweensOf(track);
+      if (animationRef.current) {
+        animationRef.current.kill();
+      }
     };
   }, []);
 
   const allSkills = skillCategories.flatMap(cat => cat.skills);
 
   return (
-    <section id="skills" className="section-padding py-section bg-card/30 overflow-hidden">
+    <section id="skills" className="section-padding py-section bg-card/30 overflow-hidden" aria-labelledby="skills-heading">
       <div className="max-w-6xl">
-        <div className="mb-12">
+        <div className="mb-10 md:mb-12">
           <span className="text-accent font-medium text-sm uppercase tracking-wider">
             Skills
           </span>
-          <h2 className="font-display text-display-lg text-foreground font-bold mt-4 reveal-headline">
+          <h2 id="skills-heading" className="font-display text-display-lg text-foreground font-bold mt-4 reveal-headline">
             What I Work With
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 mb-12 md:mb-16">
           {skillCategories.map((category) => (
-            <div key={category.title} className="space-y-4">
-              <h3 className="font-display text-display-sm text-foreground font-semibold">
+            <div key={category.title} className="space-y-3 md:space-y-4">
+              <h3 className="font-display text-lg md:text-2xl text-foreground font-semibold">
                 {category.title}
               </h3>
-              <div className="flex flex-wrap gap-2">
+              <ul className="flex flex-wrap gap-2" role="list">
                 {category.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="px-4 py-2 bg-background border border-border rounded-full text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors duration-200"
-                  >
-                    {skill}
-                  </span>
+                  <li key={skill}>
+                    <span className="px-3 md:px-4 py-1.5 md:py-2 bg-background border border-border rounded-full text-xs md:text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors duration-200">
+                      {skill}
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ))}
         </div>
       </div>
 
-      <div ref={marqueeRef} className="relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
-        <div ref={trackRef} className="marquee-track flex gap-8 w-max">
+      <div
+        ref={marqueeRef}
+        className="relative"
+        style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
+        aria-hidden="true"
+      >
+        <div ref={trackRef} className="marquee-track flex gap-6 md:gap-8 w-max">
           {[...allSkills, ...allSkills].map((skill, i) => (
             <span
               key={i}
-              className="px-8 py-4 text-xl md:text-2xl font-display font-medium text-muted/40 whitespace-nowrap"
+              className="px-6 md:px-8 py-3 md:py-4 text-lg md:text-2xl font-display font-medium text-muted/30 whitespace-nowrap"
             >
               {skill}
             </span>
@@ -108,4 +115,6 @@ export default function Skills() {
       </div>
     </section>
   );
-}
+});
+
+export default Skills;

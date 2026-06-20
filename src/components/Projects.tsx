@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 import { ExternalLink } from 'lucide-react';
 
@@ -33,7 +33,7 @@ const projects = [
   },
 ];
 
-function ProjectCard({ project }: { project: typeof projects[0] }) {
+const ProjectCard = memo(function ProjectCard({ project }: { project: typeof projects[0] }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
 
@@ -60,16 +60,14 @@ function ProjectCard({ project }: { project: typeof projects[0] }) {
         rotateX,
         rotateY,
         scale: 1.02,
-        duration: 0.3,
-        ease: 'power1.out',
+        duration: 0.25,
+        ease: 'power2.out',
         transformPerspective: 1000,
       });
 
       gsap.to(glow, {
-        opacity: 0.15,
-        x: x / rect.width * 100,
-        y: y / rect.height * 100,
-        duration: 0.3,
+        opacity: 0.12,
+        duration: 0.25,
       });
     };
 
@@ -78,13 +76,13 @@ function ProjectCard({ project }: { project: typeof projects[0] }) {
         rotateX: 0,
         rotateY: 0,
         scale: 1,
-        duration: 0.5,
+        duration: 0.4,
         ease: 'power2.out',
       });
 
       gsap.to(glow, {
         opacity: 0,
-        duration: 0.3,
+        duration: 0.25,
       });
     };
 
@@ -94,6 +92,8 @@ function ProjectCard({ project }: { project: typeof projects[0] }) {
     return () => {
       card.removeEventListener('mousemove', handleMouseMove);
       card.removeEventListener('mouseleave', handleMouseLeave);
+      gsap.killTweensOf(card);
+      gsap.killTweensOf(glow);
     };
   }, []);
 
@@ -101,23 +101,20 @@ function ProjectCard({ project }: { project: typeof projects[0] }) {
     <article
       ref={cardRef}
       data-cursor-hover
-      className="group relative overflow-hidden p-6 md:p-8 bg-card border border-border rounded-lg hover:border-accent/50 transition-all duration-300"
+      className="group relative overflow-hidden p-5 md:p-8 bg-card border border-border rounded-lg hover:border-accent/50 transition-colors duration-300"
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
     >
       <div
         ref={glowRef}
-        className="pointer-events-none absolute inset-0 opacity-0 bg-gradient-radial from-accent/20 to-transparent transition-opacity"
-        style={{
-          background: 'radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(212, 162, 76, 0.2), transparent 50%)',
-        }}
+        className="pointer-events-none absolute inset-0 opacity-0 bg-gradient-to-br from-accent/15 to-transparent rounded-lg transition-opacity"
       />
-      <h3 className="font-display text-display-sm text-foreground font-semibold mb-4">
+      <h3 className="font-display text-xl md:text-2xl text-foreground font-semibold mb-3 md:mb-4">
         {project.title}
       </h3>
-      <p className="text-muted leading-relaxed mb-6">
+      <p className="text-muted leading-relaxed mb-4 md:mb-6 text-sm md:text-base">
         {project.description}
       </p>
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4 md:mb-6">
         {project.tags.map((tag) => (
           <span
             key={tag}
@@ -129,19 +126,20 @@ function ProjectCard({ project }: { project: typeof projects[0] }) {
       </div>
       <a
         href={project.link}
-        className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors duration-200"
+        className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors duration-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card px-1 -ml-1"
+        aria-label={`View ${project.title} project`}
       >
         View project
-        <ExternalLink size={14} />
+        <ExternalLink size={14} aria-hidden="true" />
       </a>
     </article>
   );
-}
+});
 
-export default function Projects() {
+const Projects = memo(function Projects() {
   return (
     <section id="projects" className="section-padding py-section relative">
-      <div className="mb-12">
+      <div className="mb-10 md:mb-12">
         <span className="text-accent font-medium text-sm uppercase tracking-wider">
           Projects
         </span>
@@ -150,11 +148,13 @@ export default function Projects() {
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>
     </section>
   );
-}
+});
+
+export default Projects;
