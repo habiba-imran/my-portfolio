@@ -10,7 +10,7 @@ import Experience from './components/Experience';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Cursor from './components/Cursor';
-import Preloader from './components/Preloader';
+import SplashScreen from './components/SplashScreen';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -26,7 +26,7 @@ function App() {
 
 
   if (!isLoaded) {
-    return <Preloader onComplete={handlePreloaderComplete} />;
+    return <SplashScreen onComplete={handlePreloaderComplete} />;
   }
 
   return (

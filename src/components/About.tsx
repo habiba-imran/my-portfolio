@@ -1,4 +1,5 @@
-import { memo } from 'react';
+import { useRef, useEffect, memo } from 'react';
+import { gsap } from 'gsap';
 import { useTextReveal } from '../hooks/useTextReveal';
 import { GraduationCap, Camera, BrainCircuit, Trophy, Award, Medal, Star } from 'lucide-react';
 
@@ -30,8 +31,65 @@ const BentoCard = memo(function BentoCard({
   title?: string;
   icon?: React.ElementType;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      // Max rotation is 5 degrees to keep it subtle and premium
+      const rotateX = ((y - centerY) / centerY) * -5;
+      const rotateY = ((x - centerX) / centerX) * 5;
+
+      gsap.to(card, {
+        rotateX: rotateX,
+        rotateY: rotateY,
+        scale: 1.02,
+        boxShadow: "0 0 40px rgba(212,162,76,0.15)",
+        transformPerspective: 1000,
+        transformOrigin: "center center",
+        ease: "power2.out",
+        duration: 0.5
+      });
+    };
+
+    const handleMouseLeave = () => {
+      gsap.to(card, {
+        rotateX: 0,
+        rotateY: 0,
+        scale: 1,
+        boxShadow: "0 0 0px rgba(212,162,76,0)",
+        ease: "power3.out",
+        duration: 0.7
+      });
+    };
+
+    card.addEventListener('mousemove', handleMouseMove);
+    card.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      card.removeEventListener('mousemove', handleMouseMove);
+      card.removeEventListener('mouseleave', handleMouseLeave);
+      gsap.killTweensOf(card);
+    };
+  }, []);
+
   return (
-    <div className={`group relative overflow-hidden rounded-3xl bg-card/40 backdrop-blur-xl border border-white/5 hover:border-accent/40 transition-all duration-500 p-8 md:p-10 hover:bg-card/60 hover:shadow-[0_0_40px_rgba(212,162,76,0.1)] hover:-translate-y-1 ${className}`}>
+    <div 
+      ref={cardRef}
+      className={`group relative overflow-hidden rounded-3xl bg-card/40 backdrop-blur-xl border border-white/5 hover:border-accent/40 transition-colors duration-500 p-8 md:p-10 hover:bg-card/60 ${className}`}
+      style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
+    >
       {/* Subtle internal gradient glow that follows hover (CSS only approx) */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-accent/10 via-transparent to-transparent transition-opacity duration-500" />
       
