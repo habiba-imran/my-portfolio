@@ -33,12 +33,8 @@ const skillCategories = [
     skills: ['LLM Integration', 'Prompt Engineering', 'STT', 'TTS', 'Deepgram', 'ElevenLabs', 'IBM watsonx'],
   },
   {
-    title: 'Backend & Infrastructure',
-    skills: ['REST APIs', 'WebSockets', 'Twilio', 'LiveKit'],
-  },
-  {
-    title: 'Databases',
-    skills: ['PostgreSQL', 'Supabase'],
+    title: 'Backend & Databases',
+    skills: ['REST APIs', 'WebSockets', 'Twilio', 'LiveKit', 'PostgreSQL', 'Supabase'],
   },
   {
     title: 'Tools',
@@ -140,16 +136,16 @@ const Skills = memo(function Skills() {
           <AnimatedHeadline>What I Work With</AnimatedHeadline>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 mb-12 md:mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-12 gap-x-8 md:gap-x-12 mb-12 md:mb-16">
           {skillCategories.map((category) => (
-            <div key={category.title} className="space-y-3 md:space-y-4">
-              <h3 className="font-display text-base md:text-lg text-foreground font-semibold">
+            <div key={category.title} className="space-y-4 md:space-y-5 pl-6 border-l-2 border-border/50 hover:border-accent transition-colors duration-500 group">
+              <h3 className="font-display text-base md:text-lg text-foreground font-semibold group-hover:text-accent transition-colors duration-300">
                 {category.title}
               </h3>
               <ul className="flex flex-wrap gap-2" role="list">
                 {category.skills.map((skill) => (
                   <li key={skill}>
-                    <span className="px-3 md:px-4 py-1.5 md:py-2 bg-background border border-border rounded-full text-xs md:text-sm text-muted hover:text-foreground hover:border-accent/50 hover:shadow-[0_0_12px_rgba(212,162,76,0.15)] hover:scale-105 transition-all duration-200 inline-block cursor-default">
+                    <span className="px-3 md:px-4 py-1.5 md:py-2 bg-background/50 border border-border/50 rounded-full text-xs md:text-sm text-muted hover:text-foreground hover:border-accent/50 hover:shadow-[0_0_12px_rgba(212,162,76,0.15)] hover:scale-105 transition-all duration-200 inline-block cursor-default">
                       {skill}
                     </span>
                   </li>

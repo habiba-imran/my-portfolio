@@ -1,6 +1,6 @@
 import { useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
-import { Mail, Github, Linkedin, ArrowUpRight } from 'lucide-react';
+import { Mail, Github, Linkedin, ArrowUpRight, Phone } from 'lucide-react';
 import { useTextReveal } from '../hooks/useTextReveal';
 
 function AnimatedHeadline({ children }: { children: string }) {
@@ -81,22 +81,34 @@ const Contact = memo(function Contact() {
         </span>
         <AnimatedHeadline>Let's Build Something Together</AnimatedHeadline>
         <p className="text-base md:text-lg text-muted leading-relaxed mb-6 md:mb-8 max-w-2xl mx-auto">
-          I'm currently looking for summer internship opportunities and interesting
-          projects to collaborate on. If you have an idea or opportunity, I'd love to hear from you.
+          I'm always exploring exciting new opportunities and creative collaborations. Whether you're building a next-gen AI product, an innovative web application, or just want to say hi, my inbox is always open.
         </p>
 
         <div className="flex flex-col items-center gap-8">
-          <MagneticButton className="inline-flex items-center">
-            <a
-              href="mailto:habiba.imran@example.com"
-              data-cursor-hover
-              className="group inline-flex items-center gap-3 px-7 md:px-8 py-3.5 md:py-4 bg-accent text-background font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <Mail size={18} aria-hidden="true" />
-              <span>Get in Touch</span>
-              <ArrowUpRight size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-200" aria-hidden="true" />
-            </a>
-          </MagneticButton>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <MagneticButton className="inline-flex items-center w-full sm:w-auto">
+              <a
+                href="mailto:habibaimrannn@gmail.com"
+                data-cursor-hover
+                className="w-full justify-center group inline-flex items-center gap-3 px-7 md:px-8 py-3.5 md:py-4 bg-accent text-background font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Mail size={18} aria-hidden="true" />
+                <span>Email Me</span>
+                <ArrowUpRight size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-200" aria-hidden="true" />
+              </a>
+            </MagneticButton>
+
+            <MagneticButton className="inline-flex items-center w-full sm:w-auto">
+              <a
+                href="tel:+923055780214"
+                data-cursor-hover
+                className="w-full justify-center group inline-flex items-center gap-3 px-7 md:px-8 py-3.5 md:py-4 border border-border text-foreground font-semibold rounded-lg hover:border-accent hover:text-accent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Phone size={18} aria-hidden="true" />
+                <span>+92 305 5780214</span>
+              </a>
+            </MagneticButton>
+          </div>
 
           <div className="flex items-center gap-5 md:gap-6">
             <a
@@ -110,7 +122,7 @@ const Contact = memo(function Contact() {
               <Github size={20} aria-hidden="true" />
             </a>
             <a
-              href="https://linkedin.com/in/habiba-imran"
+              href="https://www.linkedin.com/in/habiba-imran-118624258/"
               target="_blank"
               rel="noopener noreferrer"
               data-cursor-hover

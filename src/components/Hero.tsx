@@ -149,7 +149,7 @@ const Hero = memo(function Hero() {
         <div ref={contentRef} className="lg:col-span-7 flex flex-col justify-center">
           <div className="space-y-4 md:space-y-6">
             <p className="text-muted font-medium tracking-wide text-sm uppercase">
-              Computer Science Student
+              Full Stack Developer
             </p>
             <h1 className="font-display text-display-xl text-foreground font-bold hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left inline-block cursor-default">
               Habiba Imran

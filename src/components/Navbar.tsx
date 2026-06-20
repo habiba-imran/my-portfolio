@@ -85,6 +85,14 @@ const Navbar = memo(function Navbar() {
             {navLinks.map((link) => (
               <NavLink key={link.name} name={link.name} href={link.href} />
             ))}
+            <a
+              href="/Umm-e-Habiba-Imran-CV.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 text-sm font-medium text-background bg-accent hover:bg-accent/90 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(212,162,76,0.4)] rounded-full transition-all duration-300"
+            >
+              Download CV
+            </a>
           </div>
 
           <button
@@ -111,6 +119,15 @@ const Navbar = memo(function Navbar() {
                   {link.name}
                 </a>
               ))}
+              <a
+                href="/Umm-e-Habiba-Imran-CV.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsOpen(false)}
+                className="mt-4 w-full text-center py-3 px-4 text-sm font-medium text-background bg-accent hover:bg-accent/90 rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Download CV
+              </a>
             </div>
           </div>
         )}

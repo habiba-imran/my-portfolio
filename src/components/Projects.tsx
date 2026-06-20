@@ -23,31 +23,31 @@ function AnimatedHeadline({ children }: { children: string }) {
 const projects = [
   {
     id: 1,
-    title: 'ShopStream',
-    description: 'A full-stack e-commerce platform with real-time inventory management, payment processing via Stripe, and an admin dashboard. Built with React, Node.js, and PostgreSQL.',
-    tags: ['React', 'Node.js', 'PostgreSQL', 'Stripe'],
-    link: '#',
+    title: 'Awaaz Labs – AI Voice Platform',
+    description: 'A multi-product AI voice platform featuring a voice agent module and a call QA module (QualiCall) for LLM-based call evaluation, scoring, and report generation.',
+    tags: ['FastAPI', 'NestJS', 'LiveKit', 'Twilio'],
+    link: '',
   },
   {
     id: 2,
-    title: 'StudySync',
-    description: 'Collaborative study platform that uses AI to generate flashcards and quizzes from uploaded notes. Features real-time collaboration and progress tracking.',
-    tags: ['Next.js', 'OpenAI API', 'Socket.io', 'MongoDB'],
-    link: '#',
+    title: 'EarthScan AI',
+    description: 'Satellite building damage classifier using hybrid CNN+KNN models trained on xBD dataset. Includes a Flask web app for model inference and visual-change heatmaps.',
+    tags: ['Python', 'TensorFlow', 'Flask', 'OpenCV'],
+    link: 'https://github.com/habiba-imran/EarthScan-AI',
   },
   {
     id: 3,
-    title: 'ClimateViz',
-    description: 'Interactive data visualization dashboard presenting climate change data from NOAA and NASA APIs. Features animated charts and geographical mapping.',
-    tags: ['D3.js', 'React', 'Python', 'REST APIs'],
-    link: '#',
+    title: 'VertexVoyage Visualizer',
+    description: 'An interactive C++ desktop app using SFML that visualizes Dijkstra\'s shortest path algorithm on a real Pakistan map with real-time multi-stop routing rendering.',
+    tags: ['C++', 'SFML', 'Algorithms', 'Data Structures'],
+    link: 'https://github.com/habiba-imran/VERTEX-VOYAGE-SFML-BASED-DSA-PROJECT',
   },
   {
     id: 4,
-    title: 'DevMatch',
-    description: 'A networking platform connecting developers for hackathons and open-source projects. Includes skill matching algorithms and project collaboration tools.',
-    tags: ['React', 'Firebase', 'Tailwind CSS', 'Algolia'],
-    link: '#',
+    title: 'AIDRA – AI Disaster Response',
+    description: 'A fully integrated hybrid AI simulation system for autonomous urban disaster triage, routing, and resource allocation. Features real-time simulation, ML-driven predictions, and dynamic pathfinding.',
+    tags: ['React', 'TypeScript', 'AI/ML', 'Algorithms'],
+    link: 'https://aidra-048.netlify.app/',
   },
 ];
 
@@ -142,14 +142,18 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
           </span>
         ))}
       </div>
-      <a
-        href={project.link}
-        className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors duration-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card px-1 -ml-1"
-        aria-label={`View ${project.title} project`}
-      >
-        View project
-        <ExternalLink size={14} aria-hidden="true" />
-      </a>
+      {project.link && (
+        <a
+          href={project.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors duration-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card px-1 -ml-1"
+          aria-label={`View ${project.title} project`}
+        >
+          View project
+          <ExternalLink size={14} aria-hidden="true" />
+        </a>
+      )}
     </article>
   );
 });
