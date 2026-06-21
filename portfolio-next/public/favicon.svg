@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Dark background matching theme -->
+  <rect width="512" height="512" rx="120" fill="#0A0A0B"/>
+  <!-- Sleek yellow accent border -->
+  <rect width="512" height="512" rx="120" fill="none" stroke="#D4A24C" stroke-width="20"/>
+  <!-- HI text in the accent color -->
+  <text x="256" y="360" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="280" letter-spacing="-10" fill="#D4A24C" text-anchor="middle">HI</text>
+</svg>
