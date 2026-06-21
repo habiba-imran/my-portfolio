@@ -2,6 +2,7 @@ import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 import { ExternalLink } from 'lucide-react';
 import { useTextReveal } from '../hooks/useTextReveal';
+import { useSound } from '../context/SoundContext';
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#projects');
@@ -54,6 +55,7 @@ const projects = [
 const ProjectCard = memo(function ProjectCard({ project }: { project: typeof projects[0] }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const { playTick } = useSound();
 
   useEffect(() => {
     const card = cardRef.current;
@@ -118,6 +120,7 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
   return (
     <article
       ref={cardRef}
+      onMouseEnter={playTick}
       data-cursor-hover
       className="group relative overflow-hidden p-5 md:p-8 bg-card border border-border rounded-lg hover:border-accent/50 transition-colors duration-300"
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}

@@ -11,6 +11,7 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Cursor from './components/Cursor';
 import SplashScreen from './components/SplashScreen';
+import InteractiveGrid from './components/InteractiveGrid';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,7 +36,7 @@ function App() {
       <div className="noise-overlay" aria-hidden="true" />
 
       {/* Ambient background effects */}
-      <div className="dot-grid" aria-hidden="true" />
+      <InteractiveGrid />
       <div className="ambient-blob ambient-blob--gold" aria-hidden="true" />
       <div className="ambient-blob ambient-blob--rust" aria-hidden="true" />
       <div className="ambient-blob ambient-blob--subtle" aria-hidden="true" />

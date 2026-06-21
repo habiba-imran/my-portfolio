@@ -1,7 +1,8 @@
-import { Menu, X, Sun, Moon } from 'lucide-react';
+import { Menu, X, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 import { useTheme } from '../context/ThemeContext';
+import { useSound } from '../context/SoundContext';
 
 const navLinks = [
   { name: 'About', href: '#about' },
@@ -11,7 +12,7 @@ const navLinks = [
   { name: 'Contact', href: '#contact' },
 ];
 
-const NavLink = memo(function NavLink({ name, href }: { name: string; href: string }) {
+const NavLink = memo(function NavLink({ name, href, onHover }: { name: string; href: string, onHover: () => void }) {
   const linkRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -60,6 +61,7 @@ const NavLink = memo(function NavLink({ name, href }: { name: string; href: stri
     <a
       ref={linkRef}
       href={href}
+      onMouseEnter={onHover}
       className="text-sm font-medium text-muted hover:text-accent transition-colors duration-200 px-1 -mx-1"
     >
       {name}
@@ -70,6 +72,12 @@ const NavLink = memo(function NavLink({ name, href }: { name: string; href: stri
 const Navbar = memo(function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { isMuted, toggleMute, playTick, playWhoosh } = useSound();
+
+  const handleThemeToggle = () => {
+    playWhoosh();
+    toggleTheme();
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50" role="navigation" aria-label="Main navigation">
@@ -77,6 +85,7 @@ const Navbar = memo(function Navbar() {
         <div className="flex items-center justify-between h-16 md:h-20">
           <a
             href="#"
+            onMouseEnter={playTick}
             className="font-display font-semibold text-lg text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded hover:text-accent hover:scale-105 hover:drop-shadow-[0_0_8px_rgba(212,162,76,0.4)] transition-all duration-300 origin-left inline-block"
             aria-label="Habiba Imran - Home"
           >
@@ -86,12 +95,13 @@ const Navbar = memo(function Navbar() {
           <div className="flex items-center gap-2 md:gap-8">
             <div className="hidden md:flex items-center gap-8">
               {navLinks.map((link) => (
-                <NavLink key={link.name} name={link.name} href={link.href} />
+                <NavLink key={link.name} name={link.name} href={link.href} onHover={playTick} />
               ))}
               <a
                 href="/Umm-e-Habiba-Imran-CV.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
+                onMouseEnter={playTick}
                 className="px-5 py-2.5 text-sm font-medium text-background bg-accent hover:bg-accent/90 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(212,162,76,0.4)] rounded-full transition-all duration-300"
               >
                 Download CV
@@ -99,7 +109,15 @@ const Navbar = memo(function Navbar() {
             </div>
 
             <button
-              onClick={toggleTheme}
+              onClick={toggleMute}
+              className="p-2 text-muted hover:text-accent transition-colors duration-200 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              aria-label={isMuted ? "Unmute sounds" : "Mute sounds"}
+            >
+              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            </button>
+
+            <button
+              onClick={handleThemeToggle}
               className="p-2 text-muted hover:text-accent transition-colors duration-200 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label={theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
             >

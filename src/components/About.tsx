@@ -2,6 +2,7 @@ import { useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 import { useTextReveal } from '../hooks/useTextReveal';
 import { GraduationCap, Camera, BrainCircuit, Trophy, Award, Medal, Star } from 'lucide-react';
+import { useSound } from '../context/SoundContext';
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#about');
@@ -32,6 +33,7 @@ const BentoCard = memo(function BentoCard({
   icon?: React.ElementType;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const { playTick } = useSound();
 
   useEffect(() => {
     const card = cardRef.current;
@@ -87,6 +89,7 @@ const BentoCard = memo(function BentoCard({
   return (
     <div 
       ref={cardRef}
+      onMouseEnter={playTick}
       className={`group relative overflow-hidden rounded-3xl bg-card/40 backdrop-blur-xl border border-white/5 hover:border-accent/40 transition-colors duration-500 p-8 md:p-10 hover:bg-card/60 ${className}`}
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
     >
