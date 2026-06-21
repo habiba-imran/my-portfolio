@@ -1,13 +1,18 @@
+import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
-import About from '@/components/About';
-import Skills from '@/components/Skills';
-import Projects from '@/components/Projects';
-import Experience from '@/components/Experience';
-import Contact from '@/components/Contact';
-import Footer from '@/components/Footer';
-import Cursor from '@/components/Cursor';
-import InteractiveGrid from '@/components/InteractiveGrid';
+
+// Dynamically import components "below the fold" to reduce initial bundle size
+const About = dynamic(() => import('@/components/About'));
+const Skills = dynamic(() => import('@/components/Skills'));
+const Projects = dynamic(() => import('@/components/Projects'));
+const Experience = dynamic(() => import('@/components/Experience'));
+const Contact = dynamic(() => import('@/components/Contact'));
+const Footer = dynamic(() => import('@/components/Footer'));
+
+// Disable SSR for components that rely entirely on the browser window (Canvas, Mouse tracking)
+const InteractiveGrid = dynamic(() => import('@/components/InteractiveGrid'), { ssr: false });
+const Cursor = dynamic(() => import('@/components/Cursor'), { ssr: false });
 
 export default function Page() {
   return (
