@@ -22,36 +22,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   );
 }
 
-const projects = [
-  {
-    id: 1,
-    title: 'Awaaz Labs – AI Voice Platform',
-    description: 'A multi-product AI voice platform featuring a voice agent module and a call QA module (QualiCall) for LLM-based call evaluation, scoring, and report generation.',
-    tags: ['FastAPI', 'NestJS', 'LiveKit', 'Twilio'],
-    link: '',
-  },
-  {
-    id: 2,
-    title: 'EarthScan AI',
-    description: 'Satellite building damage classifier using hybrid CNN+KNN models trained on xBD dataset. Includes a Flask web app for model inference and visual-change heatmaps.',
-    tags: ['Python', 'TensorFlow', 'Flask', 'OpenCV'],
-    link: 'https://github.com/habiba-imran/EarthScan-AI',
-  },
-  {
-    id: 3,
-    title: 'VertexVoyage Visualizer',
-    description: 'An interactive C++ desktop app using SFML that visualizes Dijkstra\'s shortest path algorithm on a real Pakistan map with real-time multi-stop routing rendering.',
-    tags: ['C++', 'SFML', 'Algorithms', 'Data Structures'],
-    link: 'https://github.com/habiba-imran/VERTEX-VOYAGE-SFML-BASED-DSA-PROJECT',
-  },
-  {
-    id: 4,
-    title: 'AIDRA – AI Disaster Response',
-    description: 'A fully integrated hybrid AI simulation system for autonomous urban disaster triage, routing, and resource allocation. Features real-time simulation, ML-driven predictions, and dynamic pathfinding.',
-    tags: ['React', 'TypeScript', 'AI/ML', 'Algorithms'],
-    link: 'https://aidra-048.netlify.app/',
-  },
-];
+import { projects } from '../lib/data';
 
 const ProjectCard = memo(function ProjectCard({ project }: { project: typeof projects[0] }) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -182,3 +153,4 @@ const Projects = memo(function Projects() {
 });
 
 export default Projects;
+

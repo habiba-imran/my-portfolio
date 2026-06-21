@@ -2,7 +2,7 @@
 import { Menu, X, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from 'next-themes';
 import { useSound } from '../context/SoundContext';
 
 const navLinks = [
@@ -72,12 +72,17 @@ const NavLink = memo(function NavLink({ name, href, onHover }: { name: string; h
 
 const Navbar = memo(function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
   const { isMuted, toggleMute, playTick, playWhoosh } = useSound();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleThemeToggle = () => {
     playWhoosh();
-    toggleTheme();
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -120,9 +125,9 @@ const Navbar = memo(function Navbar() {
             <button
               onClick={handleThemeToggle}
               className="p-2 text-muted hover:text-accent transition-colors duration-200 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              aria-label={theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={mounted && theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              {mounted && theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
             <button

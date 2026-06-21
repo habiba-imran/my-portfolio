@@ -19,29 +19,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   );
 }
 
-const experiences = [
-  {
-    id: 1,
-    title: 'Full Stack Developer',
-    company: 'Finova Solutions',
-    period: 'April 2026 – Ongoing',
-    description: 'Contributed in building full-stack SaaS features across dashboard, backend APIs, and configuration flows for AI-powered voice and call evaluation products.',
-  },
-  {
-    id: 2,
-    title: 'Intern',
-    company: 'Finova Solutions',
-    period: 'February 2026 – April 2026',
-    description: 'Developed a production voice AI agent pipeline handling call input, LLM processing, and TTS output for real-world phone-call automation workflows.',
-  },
-  {
-    id: 3,
-    title: 'Intern',
-    company: 'SPS-NASTP',
-    period: 'July 2025 – Sept 2025',
-    description: 'Built GreenKeyper, a conversational AI app using IBM Watsonx AI Assistant, covering chatbot logic and assistant configuration for real-world interaction design.',
-  },
-];
+import { experiences } from '../lib/data';
 
 export default function Experience() {
   return (
@@ -77,3 +55,4 @@ export default function Experience() {
     </section>
   );
 }
+

@@ -20,32 +20,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   );
 }
 
-const skillCategories = [
-  {
-    title: 'Languages',
-    skills: ['Python', 'JavaScript', 'C++', 'SQL', 'Assembly'],
-  },
-  {
-    title: 'Frameworks & Libraries',
-    skills: ['FastAPI', 'NestJS', 'React', 'NumPy', 'Pandas'],
-  },
-  {
-    title: 'AI & Voice Technologies',
-    skills: ['LLM Integration', 'Prompt Engineering', 'STT', 'TTS', 'Deepgram', 'ElevenLabs', 'IBM watsonx'],
-  },
-  {
-    title: 'Backend & Databases',
-    skills: ['REST APIs', 'WebSockets', 'Twilio', 'LiveKit', 'PostgreSQL', 'Supabase'],
-  },
-  {
-    title: 'Tools',
-    skills: ['Git', 'GitHub', 'VS Code'],
-  },
-  {
-    title: 'CS Core',
-    skills: ['Data Structures & Algorithms', 'OOP', 'Operating Systems'],
-  },
-];
+import { skillCategories } from '../lib/data';
 
 const Skills = memo(function Skills() {
   const marqueeRef = useRef<HTMLDivElement>(null);
@@ -179,3 +154,4 @@ const Skills = memo(function Skills() {
 });
 
 export default Skills;
+

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, memo } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from 'next-themes';
 
 interface Dot {
   x: number;
