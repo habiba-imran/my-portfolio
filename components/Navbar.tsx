@@ -2,7 +2,7 @@
 import { Menu, X, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from 'next-themes';
 import { useSound } from '../context/SoundContext';
 
 const navLinks = [
@@ -13,7 +13,7 @@ const navLinks = [
   { name: 'Contact', href: '#contact' },
 ];
 
-const NavLink = memo(function NavLink({ name, href, onHover }: { name: string; href: string, onHover: () => void }) {
+const NavLink = memo(function NavLink({ name, href, isActive, onHover }: { name: string; href: string, isActive: boolean, onHover: () => void }) {
   const linkRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ const NavLink = memo(function NavLink({ name, href, onHover }: { name: string; h
       ref={linkRef}
       href={href}
       onMouseEnter={onHover}
-      className="text-sm font-medium text-muted hover:text-accent transition-colors duration-200 px-1 -mx-1"
+      className={`text-sm font-medium transition-colors duration-200 px-1 -mx-1 ${isActive ? 'text-accent drop-shadow-[0_0_8px_rgba(212,162,76,0.4)]' : 'text-muted hover:text-accent'}`}
     >
       {name}
     </a>
@@ -72,12 +72,36 @@ const NavLink = memo(function NavLink({ name, href, onHover }: { name: string; h
 
 const Navbar = memo(function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+  const { theme, setTheme } = useTheme();
   const { isMuted, toggleMute, playTick, playWhoosh } = useSound();
+
+  useEffect(() => {
+    setMounted(true);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(`#${entry.target.id}`);
+          }
+        });
+      },
+      { rootMargin: "-40% 0px -60% 0px" } // trigger when section is in the top/middle
+    );
+
+    navLinks.forEach((link) => {
+      const section = document.querySelector(link.href);
+      if (section) observer.observe(section);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleThemeToggle = () => {
     playWhoosh();
-    toggleTheme();
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -96,7 +120,7 @@ const Navbar = memo(function Navbar() {
           <div className="flex items-center gap-2 md:gap-8">
             <div className="hidden md:flex items-center gap-8">
               {navLinks.map((link) => (
-                <NavLink key={link.name} name={link.name} href={link.href} onHover={playTick} />
+                <NavLink key={link.name} name={link.name} href={link.href} isActive={activeSection === link.href} onHover={playTick} />
               ))}
               <a
                 href="/Umm-e-Habiba-Imran-CV.pdf"
@@ -120,9 +144,9 @@ const Navbar = memo(function Navbar() {
             <button
               onClick={handleThemeToggle}
               className="p-2 text-muted hover:text-accent transition-colors duration-200 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              aria-label={theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={mounted && theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              {mounted && theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
             <button
@@ -145,7 +169,7 @@ const Navbar = memo(function Navbar() {
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="text-sm font-medium text-muted hover:text-accent transition-colors duration-200 py-2 px-1 -mx-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className={`text-sm font-medium transition-colors duration-200 py-2 px-1 -mx-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${activeSection === link.href ? 'text-accent' : 'text-muted hover:text-accent'}`}
                 >
                   {link.name}
                 </a>

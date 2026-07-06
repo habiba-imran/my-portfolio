@@ -2,8 +2,11 @@
 import { useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 import { useTextReveal } from '../hooks/useTextReveal';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { GraduationCap, Camera, BrainCircuit, Trophy, Award, Medal, Star } from 'lucide-react';
 import { useSound } from '../context/SoundContext';
+
+gsap.registerPlugin(ScrollTrigger);
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#about');
@@ -22,27 +25,64 @@ function AnimatedHeadline({ children }: { children: string }) {
   );
 }
 
-const BentoCard = memo(function BentoCard({ 
-  children, 
+const BentoCard = memo(function BentoCard({
+  children,
   className,
   title,
   icon: Icon
-}: { 
-  children: React.ReactNode; 
+}: {
+  children: React.ReactNode;
   className?: string;
   title?: string;
   icon?: React.ElementType;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
   const { playTick } = useSound();
 
   useEffect(() => {
     const card = cardRef.current;
-    if (!card) return;
+    const glow = glowRef.current;
+    if (!card || !glow) return;
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
+    // Continuous scroll-based flourish
+    const tl = gsap.timeline({ paused: true });
+
+    tl.fromTo(card, {
+      rotateX: 6,
+      scale: 0.96,
+      transformPerspective: 1000,
+    }, {
+      rotateX: -6,
+      scale: 1,
+      ease: "none",
+      duration: 1
+    }, 0);
+
+    tl.fromTo(glow, {
+      opacity: 0,
+    }, {
+      opacity: 0.12,
+      ease: "none",
+      duration: 0.5
+    }, 0).to(glow, {
+      opacity: 0,
+      ease: "none",
+      duration: 0.5
+    }, 0.5);
+
+    const st = ScrollTrigger.create({
+      trigger: card,
+      start: "top bottom",
+      end: "bottom top",
+      animation: tl,
+      scrub: 1,
+    });
+
     const handleMouseMove = (e: MouseEvent) => {
+      st.disable();
       const rect = card.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -64,6 +104,12 @@ const BentoCard = memo(function BentoCard({
         ease: "power2.out",
         duration: 0.5
       });
+      
+      gsap.to(glow, {
+        opacity: 1,
+        ease: "power2.out",
+        duration: 0.3
+      });
     };
 
     const handleMouseLeave = () => {
@@ -73,7 +119,16 @@ const BentoCard = memo(function BentoCard({
         scale: 1,
         boxShadow: "0 0 0px rgba(212,162,76,0)",
         ease: "power3.out",
-        duration: 0.7
+        duration: 0.7,
+        onComplete: () => {
+          st.enable();
+        }
+      });
+      
+      gsap.to(glow, {
+        opacity: 0,
+        ease: "power3.out",
+        duration: 0.5
       });
     };
 
@@ -84,6 +139,9 @@ const BentoCard = memo(function BentoCard({
       card.removeEventListener('mousemove', handleMouseMove);
       card.removeEventListener('mouseleave', handleMouseLeave);
       gsap.killTweensOf(card);
+      gsap.killTweensOf(glow);
+      st.kill();
+      tl.kill();
     };
   }, []);
 
@@ -94,9 +152,11 @@ const BentoCard = memo(function BentoCard({
       className={`group relative overflow-hidden rounded-3xl bg-card/40 backdrop-blur-xl border border-white/5 hover:border-accent/40 transition-colors duration-500 p-8 md:p-10 hover:bg-card/60 ${className}`}
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
     >
-      {/* Subtle internal gradient glow that follows hover (CSS only approx) */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-accent/10 via-transparent to-transparent transition-opacity duration-500" />
-      
+      <div 
+        ref={glowRef}
+        className="absolute inset-0 opacity-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent transition-opacity duration-500" 
+      />
+
       {title && Icon && (
         <div className="flex items-center gap-3 mb-6 relative z-10">
           <div className="p-2.5 rounded-xl bg-background/50 border border-white/5 group-hover:border-accent/30 group-hover:bg-accent/10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
@@ -122,17 +182,17 @@ export default function About() {
         <AnimatedHeadline>My Story</AnimatedHeadline>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 auto-rows-[minmax(180px,auto)]">
-          
+
           {/* Main Bio - Spans 2 columns, 2 rows */}
           <BentoCard className="md:col-span-2 md:row-span-2">
             <div className="space-y-6 text-base md:text-lg text-muted leading-relaxed text-justify">
               <p>
-                I'm a computer science student passionate about building digital experiences 
-                with clean code and creative thinking. My journey into programming started 
+                I'm a computer science student passionate about building digital experiences
+                with clean code and creative thinking. My journey into programming started
                 early, driven by a deep curiosity for how software can shape the real world.
               </p>
               <p>
-                I specialize in <strong>Full-Stack Development</strong> and <strong>Voice AI</strong>, 
+                I specialize in <strong>Full-Stack Development</strong> and <strong>Voice AI</strong>,
                 exploring how intelligent systems can interact seamlessly with everyday users.
                 Whether it's designing intuitive user interfaces, architecting robust backend APIs,
                 or deploying LLM pipelines, I'm always excited to push the boundaries of what's possible.
@@ -164,7 +224,7 @@ export default function About() {
           {/* Awards & Certificates - Spans 4 columns */}
           <BentoCard title="Awards & Certificates" icon={Trophy} className="md:col-span-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              
+
               <div className="flex items-start gap-3">
                 <div className="mt-1 p-1.5 rounded-lg bg-accent/10 text-accent"><Award size={16} /></div>
                 <div>

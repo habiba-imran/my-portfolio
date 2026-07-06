@@ -4,6 +4,9 @@ import { gsap } from 'gsap';
 import { ExternalLink } from 'lucide-react';
 import { useTextReveal } from '../hooks/useTextReveal';
 import { useSound } from '../context/SoundContext';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#projects');
@@ -22,36 +25,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   );
 }
 
-const projects = [
-  {
-    id: 1,
-    title: 'Awaaz Labs – AI Voice Platform',
-    description: 'A multi-product AI voice platform featuring a voice agent module and a call QA module (QualiCall) for LLM-based call evaluation, scoring, and report generation.',
-    tags: ['FastAPI', 'NestJS', 'LiveKit', 'Twilio'],
-    link: '',
-  },
-  {
-    id: 2,
-    title: 'EarthScan AI',
-    description: 'Satellite building damage classifier using hybrid CNN+KNN models trained on xBD dataset. Includes a Flask web app for model inference and visual-change heatmaps.',
-    tags: ['Python', 'TensorFlow', 'Flask', 'OpenCV'],
-    link: 'https://github.com/habiba-imran/EarthScan-AI',
-  },
-  {
-    id: 3,
-    title: 'VertexVoyage Visualizer',
-    description: 'An interactive C++ desktop app using SFML that visualizes Dijkstra\'s shortest path algorithm on a real Pakistan map with real-time multi-stop routing rendering.',
-    tags: ['C++', 'SFML', 'Algorithms', 'Data Structures'],
-    link: 'https://github.com/habiba-imran/VERTEX-VOYAGE-SFML-BASED-DSA-PROJECT',
-  },
-  {
-    id: 4,
-    title: 'AIDRA – AI Disaster Response',
-    description: 'A fully integrated hybrid AI simulation system for autonomous urban disaster triage, routing, and resource allocation. Features real-time simulation, ML-driven predictions, and dynamic pathfinding.',
-    tags: ['React', 'TypeScript', 'AI/ML', 'Algorithms'],
-    link: 'https://aidra-048.netlify.app/',
-  },
-];
+import { projects } from '../lib/data';
 
 const ProjectCard = memo(function ProjectCard({ project }: { project: typeof projects[0] }) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -66,7 +40,42 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
+    // Continuous scroll-based flourish
+    const tl = gsap.timeline({ paused: true });
+
+    tl.fromTo(card, {
+      rotateX: 6,
+      scale: 0.96,
+      transformPerspective: 1000,
+    }, {
+      rotateX: -6,
+      scale: 1,
+      ease: "none",
+      duration: 1
+    }, 0);
+
+    tl.fromTo(glow, {
+      opacity: 0,
+    }, {
+      opacity: 0.12,
+      ease: "none",
+      duration: 0.5
+    }, 0).to(glow, {
+      opacity: 0,
+      ease: "none",
+      duration: 0.5
+    }, 0.5);
+
+    const st = ScrollTrigger.create({
+      trigger: card,
+      start: "top bottom",
+      end: "bottom top",
+      animation: tl,
+      scrub: 1,
+    });
+
     const handleMouseMove = (e: MouseEvent) => {
+      st.disable(); // Prevent scroll from fighting hover
       const rect = card.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -99,6 +108,9 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
         scale: 1,
         duration: 0.4,
         ease: 'power2.out',
+        onComplete: () => {
+          st.enable(); // Re-enable scrub
+        }
       });
 
       gsap.to(glow, {
@@ -115,6 +127,8 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
       card.removeEventListener('mouseleave', handleMouseLeave);
       gsap.killTweensOf(card);
       gsap.killTweensOf(glow);
+      st.kill();
+      tl.kill();
     };
   }, []);
 
@@ -182,3 +196,4 @@ const Projects = memo(function Projects() {
 });
 
 export default Projects;
+
