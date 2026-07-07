@@ -63,9 +63,10 @@ const NavLink = memo(function NavLink({ name, href, isActive, onHover }: { name:
       ref={linkRef}
       href={href}
       onMouseEnter={onHover}
-      className={`text-sm font-medium transition-colors duration-200 px-1 -mx-1 ${isActive ? 'text-accent drop-shadow-[0_0_8px_rgba(212,162,76,0.4)]' : 'text-muted hover:text-accent'}`}
+      className={`relative px-1 py-2 text-sm font-medium transition-colors duration-200 ${isActive ? 'text-accent' : 'text-muted hover:text-foreground'}`}
     >
       {name}
+      <span className={`absolute bottom-0 left-1 right-1 h-px origin-left bg-accent transition-transform duration-300 ${isActive ? 'scale-x-100' : 'scale-x-0'}`} />
     </a>
   );
 });
@@ -105,13 +106,13 @@ const Navbar = memo(function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50" role="navigation" aria-label="Main navigation">
+    <nav className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-background/72 backdrop-blur-xl" role="navigation" aria-label="Main navigation">
       <div className="section-padding">
         <div className="flex items-center justify-between h-16 md:h-20">
           <a
             href="#"
             onMouseEnter={playTick}
-            className="font-display font-semibold text-lg text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded hover:text-accent hover:scale-105 hover:drop-shadow-[0_0_8px_rgba(212,162,76,0.4)] transition-all duration-300 origin-left inline-block"
+            className="font-display text-lg font-semibold text-foreground transition-colors duration-300 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
             aria-label="Habiba Imran - Home"
           >
             Habiba Imran
@@ -127,7 +128,7 @@ const Navbar = memo(function Navbar() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onMouseEnter={playTick}
-                className="px-5 py-2.5 text-sm font-medium text-background bg-accent hover:bg-accent/90 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(212,162,76,0.4)] rounded-full transition-all duration-300"
+                className="rounded-lg border border-accent/40 bg-accent px-5 py-2.5 text-sm font-semibold text-background shadow-[0_0_24px_rgba(218,168,82,0.18)] transition-colors duration-200 hover:bg-accent/90"
               >
                 Download CV
               </a>

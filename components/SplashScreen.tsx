@@ -69,7 +69,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         {/* HI Logo representation */}
         <div 
           ref={logoRef}
-          className="relative w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-3xl border border-border bg-card shadow-[0_0_40px_rgba(212,162,76,0.1)] flex items-center justify-center"
+          className="relative w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-3xl border border-border bg-card shadow-[0_0_40px_rgba(218,168,82,0.12)] flex items-center justify-center"
         >
           <span className="font-display font-bold text-4xl md:text-5xl text-accent tracking-tighter">
             HI

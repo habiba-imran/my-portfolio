@@ -2,8 +2,7 @@
 import { useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import HolographicCode from './HolographicCode';
-import Image from 'next/image';
+import HeroShowcase from './HeroShowcase';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -139,21 +138,40 @@ const Hero = memo(function Hero() {
   }, []);
 
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center section-padding pt-20 md:pt-24 overflow-hidden">
-      <HolographicCode />
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full relative z-10">
+    <section ref={heroRef} className="relative flex min-h-[calc(100vh+4rem)] items-center overflow-hidden section-padding pb-20 pt-28 md:pb-24 md:pt-36">
+      <div className="hero-grid-bg" aria-hidden="true" />
+      <div className="relative z-10 grid w-full grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
         <div ref={contentRef} className="lg:col-span-7 flex flex-col justify-center">
           <div className="space-y-4 md:space-y-6">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(218,168,82,0.9)]" />
+              Available for Software / AI Roles
+            </div>
             <p className="text-muted font-medium tracking-wide text-sm uppercase">
               Software Engineer - Full Stack & Voice AI
             </p>
-            <h1 className="font-display text-display-xl text-foreground font-bold hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left inline-block cursor-default">
+            <h1 className="hero-title font-display text-display-xl text-foreground font-bold transition-all duration-500 origin-left inline-block cursor-default">
               Habiba Imran
             </h1>
             <p className="text-base md:text-lg text-muted max-w-xl leading-relaxed">
               I build full-stack web apps and AI voice systems, from product dashboards
               and backend APIs to real-time STT, LLM, and TTS pipelines.
             </p>
+            <p className="max-w-xl text-sm text-muted/80">
+              Currently building AI voice and call intelligence products at Finova Solutions.
+            </p>
+            <div className="grid max-w-xl grid-cols-1 gap-3 pt-1 sm:grid-cols-3">
+              {[
+                ['Focus', 'Voice AI systems'],
+                ['Stack', 'React + FastAPI'],
+                ['CGPA', '3.87 BSCS'],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-xl border border-white/10 bg-card/55 px-4 py-3 backdrop-blur">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-accent/80">{label}</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
+                </div>
+              ))}
+            </div>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <a
                 href="#projects"
@@ -176,21 +194,7 @@ const Hero = memo(function Hero() {
         </div>
 
         <div ref={container3DRef} className="lg:col-span-5 relative">
-          <div
-            id="hero-image-container"
-            className="w-full aspect-square md:aspect-[4/3] lg:aspect-square flex items-center justify-center relative"
-          >
-            <div className="profile-glow-ring w-[80%] max-w-[400px] aspect-square rounded-full overflow-hidden border-2 border-accent/30 shadow-2xl shadow-accent/10 relative group">
-              <Image 
-                src="/pfp.jpeg" 
-                alt="Habiba Imran Profile" 
-                width={400}
-                height={400}
-                priority
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            </div>
-          </div>
+          <HeroShowcase />
         </div>
       </div>
     </section>

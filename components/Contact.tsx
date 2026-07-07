@@ -10,7 +10,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   const words = children.split(' ');
 
   return (
-    <h2 id="contact-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-5 md:mb-6 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 id="contact-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-5 md:mb-6 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(218,168,82,0.3)] transition-all duration-500 cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap justify-center">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">

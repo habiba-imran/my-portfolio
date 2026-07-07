@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
 import { SoundProvider } from '@/context/SoundContext';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const plusJakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-plus-jakarta' });
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk' });
 
 export const metadata: Metadata = {
   title: 'Habiba Imran | Software Engineer - AI & Full Stack',
@@ -25,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${plusJakarta.variable} ${inter.className}`}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} ${inter.className}`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <SoundProvider>
             {children}

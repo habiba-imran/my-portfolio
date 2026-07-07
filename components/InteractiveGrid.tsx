@@ -34,7 +34,7 @@ const InteractiveGrid = memo(function InteractiveGrid() {
 
     // Theme colors
     const baseColor = theme === 'dark' ? 'rgba(242, 240, 235, 0.06)' : 'rgba(20, 20, 22, 0.08)';
-    const accentColor = 'rgba(212, 162, 76, 0.8)'; // Gold accent
+    const accentColor = 'rgba(218, 168, 82, 0.8)';
 
     const initGrid = () => {
       canvas.width = window.innerWidth;

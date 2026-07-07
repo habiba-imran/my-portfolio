@@ -14,7 +14,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   const words = children.split(' ');
 
   return (
-    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-8 md:mb-12 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-8 md:mb-12 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(218,168,82,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -99,7 +99,7 @@ const BentoCard = memo(function BentoCard({
         rotateX: rotateX,
         rotateY: rotateY,
         scale: 1.02,
-        boxShadow: "0 0 40px rgba(212,162,76,0.15)",
+        boxShadow: "0 0 40px rgba(218,168,82,0.15)",
         transformPerspective: 1000,
         transformOrigin: "center center",
         ease: "power2.out",
@@ -118,7 +118,7 @@ const BentoCard = memo(function BentoCard({
         rotateX: 0,
         rotateY: 0,
         scale: 1,
-        boxShadow: "0 0 0px rgba(212,162,76,0)",
+        boxShadow: "0 0 0px rgba(218,168,82,0)",
         ease: "power3.out",
         duration: 0.7,
         onComplete: () => {
@@ -150,7 +150,7 @@ const BentoCard = memo(function BentoCard({
     <div 
       ref={cardRef}
       onMouseEnter={playTick}
-      className={`group relative overflow-hidden rounded-xl bg-card/40 backdrop-blur-xl border border-white/5 hover:border-accent/40 transition-colors duration-500 p-8 md:p-10 hover:bg-card/60 ${className}`}
+      className={`group relative overflow-hidden rounded-xl bg-card/45 backdrop-blur-xl border border-white/10 hover:border-accent/40 transition-colors duration-500 p-8 md:p-10 hover:bg-card/65 ${className}`}
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
     >
       <div 

@@ -3,13 +3,14 @@ import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 import { useTextReveal } from '../hooks/useTextReveal';
 import { useSectionReveal } from '../hooks/useSectionReveal';
+import SkillsConsole from './SkillsConsole';
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#skills');
   const words = children.split(' ');
 
   return (
-    <h2 id="skills-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 id="skills-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(218,168,82,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -54,7 +55,7 @@ const Skills = memo(function Skills() {
       if (trackRef.current) {
         gsap.fromTo(
           trackRef.current.children,
-          { color: '#D4A24C' },
+          { color: 'rgb(218, 168, 82)' },
           { color: '', duration: 0.8, stagger: 0.02, ease: 'power2.out', overwrite: 'auto' }
         );
       }
@@ -91,23 +92,8 @@ const Skills = memo(function Skills() {
           <AnimatedHeadline>What I Work With</AnimatedHeadline>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-12 gap-x-8 md:gap-x-12 mb-12 md:mb-16">
-          {skillCategories.map((category) => (
-            <div key={category.title} className="space-y-4 md:space-y-5 pl-6 border-l-2 border-border/50 hover:border-accent transition-colors duration-500 group">
-              <h3 className="font-display text-base md:text-lg text-foreground font-semibold group-hover:text-accent transition-colors duration-300">
-                {category.title}
-              </h3>
-              <ul className="flex flex-wrap gap-2" role="list">
-                {category.skills.map((skill) => (
-                  <li key={skill}>
-                    <span className="px-3 md:px-4 py-1.5 md:py-2 bg-background/50 border border-border/50 rounded-full text-xs md:text-sm text-muted hover:text-foreground hover:border-accent/50 hover:shadow-[0_0_12px_rgba(212,162,76,0.15)] hover:scale-105 transition-all duration-200 inline-block cursor-default">
-                      {skill}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="mb-12 md:mb-16">
+          <SkillsConsole />
         </div>
       </div>
 

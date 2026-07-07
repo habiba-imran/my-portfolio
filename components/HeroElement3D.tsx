@@ -39,7 +39,7 @@ function IcosahedronMesh({ scrollY }: { scrollY: number }) {
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
       <Icosahedron ref={meshRef} args={[1.5, 1]}>
         <meshBasicMaterial
-          color="#D4A24C"
+          color="#DAA852"
           wireframe
           transparent
           opacity={0.6}
