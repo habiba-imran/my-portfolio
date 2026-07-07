@@ -8,7 +8,7 @@ class WebGLErrorBoundary extends Component<{ children: ReactNode; fallback: Reac
   state = { hasError: false };
 
   componentDidCatch() {
-    this.state = { hasError: true };
+    this.setState({ hasError: true });
   }
 
   render() {

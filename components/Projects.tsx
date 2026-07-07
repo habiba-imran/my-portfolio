@@ -2,7 +2,9 @@
 import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 import { ExternalLink } from 'lucide-react';
+import Image from 'next/image';
 import { useTextReveal } from '../hooks/useTextReveal';
+import { useSectionReveal } from '../hooks/useSectionReveal';
 import { useSound } from '../context/SoundContext';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -13,7 +15,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   const words = children.split(' ');
 
   return (
-    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -144,6 +146,29 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
         ref={glowRef}
         className="pointer-events-none absolute inset-0 opacity-0 bg-gradient-to-br from-accent/15 to-transparent rounded-lg transition-opacity"
       />
+      <div className="relative mb-5 aspect-[16/10] overflow-hidden rounded-md border border-border/70 bg-background/70">
+        {project.image ? (
+          <Image
+            src={project.image}
+            alt={`${project.title} screenshot`}
+            fill
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,rgb(var(--card))_0%,rgb(var(--background))_48%,rgb(var(--accent)/0.18)_100%)]">
+            <div className="grid h-16 w-24 grid-cols-3 gap-1 rounded-md border border-border/80 bg-card/70 p-2 shadow-[0_0_24px_rgba(212,162,76,0.08)]">
+              {Array.from({ length: 9 }).map((_, index) => (
+                <span
+                  key={index}
+                  className={`rounded-sm ${index % 3 === 0 ? 'bg-accent/50' : 'bg-border/70'}`}
+                />
+              ))}
+            </div>
+            <span className="sr-only">Project screenshot placeholder</span>
+          </div>
+        )}
+      </div>
       <h3 className="font-display text-lg md:text-xl text-foreground font-semibold mb-3 md:mb-4">
         {project.title}
       </h3>
@@ -177,8 +202,10 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: typeof pro
 });
 
 const Projects = memo(function Projects() {
+  const revealRef = useSectionReveal<HTMLElement>();
+
   return (
-    <section id="projects" className="section-padding py-section relative">
+    <section id="projects" ref={revealRef} className="section-padding py-section relative">
       <div className="mb-6 md:mb-8">
         <span className="text-accent font-medium text-sm uppercase tracking-wider">
           Projects

@@ -1,5 +1,6 @@
 "use client";
 import { useTextReveal } from '../hooks/useTextReveal';
+import { useSectionReveal } from '../hooks/useSectionReveal';
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#experience');
@@ -7,7 +8,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   const words = children.split(' ');
 
   return (
-    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -22,8 +23,10 @@ function AnimatedHeadline({ children }: { children: string }) {
 import { experiences } from '../lib/data';
 
 export default function Experience() {
+  const revealRef = useSectionReveal<HTMLElement>();
+
   return (
-    <section id="experience" className="section-padding py-section bg-card/30 relative overflow-hidden">
+    <section id="experience" ref={revealRef} className="section-padding py-section bg-card/30 relative overflow-hidden">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
         <div className="lg:col-span-4">
           <span className="text-accent font-medium text-sm uppercase tracking-wider">

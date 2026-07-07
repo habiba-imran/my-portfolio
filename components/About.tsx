@@ -2,8 +2,9 @@
 import { useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 import { useTextReveal } from '../hooks/useTextReveal';
+import { useSectionReveal } from '../hooks/useSectionReveal';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { GraduationCap, Camera, BrainCircuit, Trophy, Award, Medal, Star } from 'lucide-react';
+import { GraduationCap, BrainCircuit, Trophy, Award, Medal, Star } from 'lucide-react';
 import { useSound } from '../context/SoundContext';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -13,7 +14,7 @@ function AnimatedHeadline({ children }: { children: string }) {
   const words = children.split(' ');
 
   return (
-    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-8 md:mb-12 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-8 md:mb-12 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -149,7 +150,7 @@ const BentoCard = memo(function BentoCard({
     <div 
       ref={cardRef}
       onMouseEnter={playTick}
-      className={`group relative overflow-hidden rounded-3xl bg-card/40 backdrop-blur-xl border border-white/5 hover:border-accent/40 transition-colors duration-500 p-8 md:p-10 hover:bg-card/60 ${className}`}
+      className={`group relative overflow-hidden rounded-xl bg-card/40 backdrop-blur-xl border border-white/5 hover:border-accent/40 transition-colors duration-500 p-8 md:p-10 hover:bg-card/60 ${className}`}
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
     >
       <div 
@@ -173,8 +174,10 @@ const BentoCard = memo(function BentoCard({
 });
 
 export default function About() {
+  const revealRef = useSectionReveal<HTMLElement>();
+
   return (
-    <section id="about" className="section-padding py-section relative overflow-hidden">
+    <section id="about" ref={revealRef} className="section-padding py-section relative overflow-hidden">
       <div className="max-w-6xl mx-auto">
         <span className="text-accent font-medium text-sm uppercase tracking-wider">
           About
@@ -185,17 +188,16 @@ export default function About() {
 
           {/* Main Bio - Spans 2 columns, 2 rows */}
           <BentoCard className="md:col-span-2 md:row-span-2">
-            <div className="space-y-6 text-base md:text-lg text-muted leading-relaxed text-justify">
+            <div className="space-y-6 text-base md:text-lg text-muted leading-relaxed">
               <p>
-                I'm a computer science student passionate about building digital experiences
-                with clean code and creative thinking. My journey into programming started
-                early, driven by a deep curiosity for how software can shape the real world.
+                I&apos;m a Computer Science student and software engineer focused on full-stack
+                products, backend systems, and applied AI. I like turning complex ideas into
+                usable tools, especially where real-time systems and human interaction meet.
               </p>
               <p>
-                I specialize in <strong>Full-Stack Development</strong> and <strong>Voice AI</strong>,
-                exploring how intelligent systems can interact seamlessly with everyday users.
-                Whether it's designing intuitive user interfaces, architecting robust backend APIs,
-                or deploying LLM pipelines, I'm always excited to push the boundaries of what's possible.
+                My recent work spans React dashboards, FastAPI/NestJS services, Twilio/LiveKit
+                call flows, and LLM-powered evaluation pipelines. I care about systems that are
+                clear to use, reliable in production, and thoughtful in the small details.
               </p>
             </div>
           </BentoCard>
@@ -207,7 +209,7 @@ export default function About() {
               <p className="text-accent font-medium mb-3">BS Computer Science</p>
               <div className="flex flex-wrap gap-4 text-sm text-muted/80 mt-2">
                 <span>CGPA: <strong>3.87</strong></span>
-                <span>Expected Graduation: Dec 2027</span>
+                <span>Expected Graduation: December 2027</span>
               </div>
             </div>
           </BentoCard>
@@ -216,7 +218,7 @@ export default function About() {
           <BentoCard title="Voice AI" icon={BrainCircuit} className="md:col-span-2">
             <div className="flex flex-col">
               <p className="text-sm md:text-base text-muted leading-relaxed">
-                Building conversational AI pipelines using LLMs, STT, and TTS technologies for real-time applications.
+                Building real-time conversational AI pipelines with STT, LLM orchestration, TTS, LiveKit, and Twilio.
               </p>
             </div>
           </BentoCard>
@@ -228,7 +230,7 @@ export default function About() {
               <div className="flex items-start gap-3">
                 <div className="mt-1 p-1.5 rounded-lg bg-accent/10 text-accent"><Award size={16} /></div>
                 <div>
-                  <h4 className="font-semibold text-foreground text-sm mb-1">PM's Laptop Scheme 2025</h4>
+                  <h4 className="font-semibold text-foreground text-sm mb-1">PM&apos;s Laptop Scheme 2025</h4>
                   <p className="text-xs text-muted">Selected Recipient, Phase IV</p>
                 </div>
               </div>

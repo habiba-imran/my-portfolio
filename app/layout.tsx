@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
 import { SoundProvider } from '@/context/SoundContext';
-import SmoothScroll from '@/components/SmoothScroll';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const plusJakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-plus-jakarta' });
 
 export const metadata: Metadata = {
-  title: 'Habiba Imran | Software Engineer · AI & Full Stack',
-  description: 'Software Engineer at Finova Solutions building AI voice platforms. CS student at Bahria University. Full stack + production AI systems.',
+  title: 'Habiba Imran | Software Engineer - AI & Full Stack',
+  description: 'Software engineer building full-stack products, backend APIs, and real-time AI voice systems. CS student at Bahria University.',
   openGraph: {
     images: ['/og-image.png'],
   },
@@ -25,10 +25,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${plusJakarta.variable} ${inter.className}`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <SoundProvider>
-            <SmoothScroll />
             {children}
           </SoundProvider>
         </ThemeProvider>

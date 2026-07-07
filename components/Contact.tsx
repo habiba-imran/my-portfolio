@@ -1,15 +1,16 @@
 "use client";
-import { useRef, useEffect, memo } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
-import { Mail, Github, Linkedin, ArrowUpRight, Phone } from 'lucide-react';
+import { FileText, Github, Linkedin, Mail, ArrowUpRight } from 'lucide-react';
 import { useTextReveal } from '../hooks/useTextReveal';
+import { useSectionReveal } from '../hooks/useSectionReveal';
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#contact');
   const words = children.split(' ');
 
   return (
-    <h2 id="contact-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-5 md:mb-6 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 id="contact-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 mb-5 md:mb-6 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap justify-center">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -74,15 +75,17 @@ const MagneticButton = memo(function MagneticButton({ children, className }: { c
 });
 
 const Contact = memo(function Contact() {
+  const revealRef = useSectionReveal<HTMLElement>();
+
   return (
-    <section id="contact" className="section-padding py-section relative overflow-hidden" aria-labelledby="contact-heading">
+    <section id="contact" ref={revealRef} className="section-padding py-section relative overflow-hidden" aria-labelledby="contact-heading">
       <div className="max-w-4xl mx-auto text-center">
         <span className="text-accent font-medium text-sm uppercase tracking-wider">
           Contact
         </span>
-        <AnimatedHeadline>Let's Build Something Together</AnimatedHeadline>
+        <AnimatedHeadline>Let&apos;s Build Something Useful</AnimatedHeadline>
         <p className="text-base md:text-lg text-muted leading-relaxed mb-6 md:mb-8 max-w-2xl mx-auto">
-          I'm always exploring exciting new opportunities and creative collaborations. Whether you're building a next-gen AI product, an innovative web application, or just want to say hi, my inbox is always open.
+          I&apos;m open to software engineering, full-stack, and AI product opportunities. If you&apos;re working on voice AI, developer tools, SaaS dashboards, or practical web products, I&apos;d be happy to connect.
         </p>
 
         <div className="flex flex-col items-center gap-8">
@@ -101,12 +104,14 @@ const Contact = memo(function Contact() {
 
             <MagneticButton className="inline-flex items-center w-full sm:w-auto">
               <a
-                href="tel:+923055780214"
+                href="/Umm-e-Habiba-Imran-CV.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
                 data-cursor-hover
                 className="w-full justify-center group inline-flex items-center gap-3 px-7 md:px-8 py-3.5 md:py-4 border border-border text-foreground font-semibold rounded-lg hover:border-accent hover:text-accent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                <Phone size={18} aria-hidden="true" />
-                <span>+92 305 5780214</span>
+                <FileText size={18} aria-hidden="true" />
+                <span>Download CV</span>
               </a>
             </MagneticButton>
           </div>

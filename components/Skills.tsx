@@ -2,13 +2,14 @@
 import { useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 import { useTextReveal } from '../hooks/useTextReveal';
+import { useSectionReveal } from '../hooks/useSectionReveal';
 
 function AnimatedHeadline({ children }: { children: string }) {
   const sectionRef = useTextReveal('.reveal-word', '#skills');
   const words = children.split(' ');
 
   return (
-    <h2 id="skills-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
+    <h2 id="skills-heading" ref={sectionRef} className="font-display text-display-lg text-foreground font-bold mt-4 hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left cursor-default" style={{ overflow: 'hidden' }}>
       <span className="inline-flex flex-wrap">
         {words.map((word, i) => (
           <span key={i} className="reveal-word inline-block mr-[0.25em]">
@@ -44,11 +45,9 @@ const Skills = memo(function Skills() {
       repeat: -1,
     });
 
-    let currentDirection = 1;
-
     const handleMouseEnter = () => {
       if (animationRef.current) {
-        gsap.to(animationRef.current, { timeScale: currentDirection * 0.3, duration: 0.4, ease: 'power2.out' });
+        gsap.to(animationRef.current, { timeScale: 0.3, duration: 0.4, ease: 'power2.out' });
       }
       
       // Flash text to yellow sequentially on hover
@@ -63,37 +62,16 @@ const Skills = memo(function Skills() {
 
     const handleMouseLeave = () => {
       if (animationRef.current) {
-        gsap.to(animationRef.current, { timeScale: currentDirection * 1, duration: 0.4, ease: 'power2.out' });
-      }
-    };
-
-    const handleClick = () => {
-      if (animationRef.current) {
-        currentDirection *= -1;
-        
-        // Zippy burst in the new direction
-        // Set immediately to high speed
-        animationRef.current.timeScale(currentDirection * 8);
-        
-        // Then smoothly decelerate back to hover speed
-        gsap.to(animationRef.current, {
-          timeScale: currentDirection * 0.3, 
-          duration: 1.5, 
-          ease: 'power3.out',
-          overwrite: true // Ensure it overrides any existing hover tweens
-        });
-
+        gsap.to(animationRef.current, { timeScale: 1, duration: 0.4, ease: 'power2.out' });
       }
     };
 
     marquee.addEventListener('mouseenter', handleMouseEnter);
     marquee.addEventListener('mouseleave', handleMouseLeave);
-    marquee.addEventListener('click', handleClick);
 
     return () => {
       marquee.removeEventListener('mouseenter', handleMouseEnter);
       marquee.removeEventListener('mouseleave', handleMouseLeave);
-      marquee.removeEventListener('click', handleClick);
       if (animationRef.current) {
         animationRef.current.kill();
       }
@@ -101,9 +79,10 @@ const Skills = memo(function Skills() {
   }, []);
 
   const allSkills = skillCategories.flatMap(cat => cat.skills);
+  const revealRef = useSectionReveal<HTMLElement>();
 
   return (
-    <section id="skills" className="section-padding py-section bg-card/30 overflow-hidden" aria-labelledby="skills-heading">
+    <section id="skills" ref={revealRef} className="section-padding py-section bg-card/30 overflow-hidden" aria-labelledby="skills-heading">
       <div className="max-w-6xl">
         <div className="mb-6 md:mb-8">
           <span className="text-accent font-medium text-sm uppercase tracking-wider">
@@ -134,7 +113,7 @@ const Skills = memo(function Skills() {
 
       <div
         ref={marqueeRef}
-        className="relative cursor-pointer select-none group"
+        className="relative select-none group"
         style={{ maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}
         aria-hidden="true"
       >

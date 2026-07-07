@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState, useCallback, memo } from 'react';
+import { useRef, useEffect, memo } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import HolographicCode from './HolographicCode';
@@ -11,11 +11,6 @@ const Hero = memo(function Hero() {
   const heroRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const container3DRef = useRef<HTMLDivElement>(null);
-  const [scrollY, setScrollY] = useState(0);
-
-  const handleScrollUpdate = useCallback((self: ScrollTrigger) => {
-    setScrollY(self.progress * window.innerHeight);
-  }, []);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -81,7 +76,6 @@ const Hero = memo(function Hero() {
         start: 'top top',
         end: 'bottom top',
         scrub: 0.5,
-        onUpdate: handleScrollUpdate,
       },
     });
     // Continuous gentle floating animation for the image
@@ -142,7 +136,7 @@ const Hero = memo(function Hero() {
       hero.removeEventListener('mouseleave', handleMouseLeave);
       gsap.killTweensOf([content, container3D]);
     };
-  }, [handleScrollUpdate]);
+  }, []);
 
   return (
     <section ref={heroRef} className="relative min-h-screen flex items-center section-padding pt-20 md:pt-24 overflow-hidden">
@@ -151,15 +145,33 @@ const Hero = memo(function Hero() {
         <div ref={contentRef} className="lg:col-span-7 flex flex-col justify-center">
           <div className="space-y-4 md:space-y-6">
             <p className="text-muted font-medium tracking-wide text-sm uppercase">
-              Full Stack Developer
+              Software Engineer - Full Stack & Voice AI
             </p>
-            <h1 className="font-display text-display-xl text-foreground font-bold hover:text-accent hover:scale-[1.02] hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left inline-block cursor-default">
+            <h1 className="font-display text-display-xl text-foreground font-bold hover:text-accent hover:drop-shadow-[0_0_20px_rgba(212,162,76,0.3)] transition-all duration-500 origin-left inline-block cursor-default">
               Habiba Imran
             </h1>
             <p className="text-base md:text-lg text-muted max-w-xl leading-relaxed">
-              Building digital experiences with clean code and creative thinking.
-              Passionate about full-stack development and emerging technologies.
+              I build full-stack web apps and AI voice systems, from product dashboards
+              and backend APIs to real-time STT, LLM, and TTS pipelines.
             </p>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <a
+                href="#projects"
+                data-cursor-hover
+                className="inline-flex items-center justify-center rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-background transition-colors duration-200 hover:bg-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                View Projects
+              </a>
+              <a
+                href="/Umm-e-Habiba-Imran-CV.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-cursor-hover
+                className="inline-flex items-center justify-center rounded-lg border border-border px-6 py-3 text-sm font-semibold text-foreground transition-colors duration-200 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                Download CV
+              </a>
+            </div>
           </div>
         </div>
 

@@ -22,9 +22,6 @@ export default function Page() {
 
       {/* Ambient background effects */}
       <InteractiveGrid />
-      <div className="ambient-blob ambient-blob--gold" aria-hidden="true" />
-      <div className="ambient-blob ambient-blob--rust" aria-hidden="true" />
-      <div className="ambient-blob ambient-blob--subtle" aria-hidden="true" />
 
       <Navbar />
       <main id="main-content">
