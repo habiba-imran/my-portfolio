@@ -1,128 +1,161 @@
-"use client";
+import { useId } from "react";
 
-import { Activity, MapPin, RadioTower, Route, Satellite, ShieldAlert } from 'lucide-react';
+type Props = { id: number; title: string; featured?: boolean };
 
-type ProjectVisualProps = {
-  id: number;
-  title: string;
-  featured?: boolean;
-};
-
-export default function ProjectVisual({ id, title, featured = false }: ProjectVisualProps) {
-  if (id === 1) {
-    return (
-      <div className="project-visual project-visual-voice h-full min-h-[240px] p-4" aria-label={`${title} visual placeholder`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <RadioTower size={18} className="text-accent" aria-hidden="true" />
-            <span className="text-xs uppercase tracking-[0.2em] text-accent">Live Agent</span>
-          </div>
-          <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-200">online</span>
-        </div>
-        <div className="mt-5 grid grid-cols-[0.9fr_1.1fr] gap-3">
-          <div className="rounded-xl border border-white/10 bg-background/55 p-3">
-            <div className="mb-4 h-20 rounded-lg bg-accent/15" />
-            <div className="space-y-2">
-              <span className="block h-2 rounded-full bg-white/15" />
-              <span className="block h-2 w-3/4 rounded-full bg-white/10" />
-              <span className="block h-2 w-1/2 rounded-full bg-accent/35" />
-            </div>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-background/55 p-3">
-            <div className="flex h-24 items-end gap-1.5">
-              {Array.from({ length: featured ? 18 : 12 }).map((_, index) => (
-                <span
-                  key={index}
-                  className="voice-bar flex-1 rounded-full bg-gradient-to-t from-accent-secondary to-accent"
-                  style={{ height: `${18 + ((index * 13) % 54)}px`, animationDelay: `${index * 0.04}s` }}
+// Original diagrams, never represented as screenshots of private or public products.
+export default function ProjectVisual({ id, title }: Props) {
+  const terrainId = useId();
+  return (
+    <div
+      className={`project-art project-art--${id}`}
+      role="img"
+      aria-label={`Conceptual illustration for ${title}, not an application screenshot`}
+    >
+      {id === 1 && (
+        <>
+          <span className="project-art-label">VOICE, WITH INTELLIGENCE.</span>
+          <div className="awaaz-art">
+            <div className="awaaz-symbol">
+              {Array.from({ length: 9 }, (_, i) => (
+                <i
+                  key={i}
+                  style={{
+                    height: `${30 + Math.sin((i / 8) * Math.PI) * 78}%`,
+                  }}
                 />
               ))}
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <span className="h-8 rounded-lg bg-accent/20" />
-              <span className="h-8 rounded-lg bg-white/10" />
-              <span className="h-8 rounded-lg bg-accent-secondary/20" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (id === 2) {
-    return (
-      <div className="project-visual h-full min-h-[240px] p-4" aria-label={`${title} visual placeholder`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Satellite size={18} className="text-accent" aria-hidden="true" />
-            <span className="text-xs uppercase tracking-[0.2em] text-accent">Damage Scan</span>
-          </div>
-          <span className="text-xs text-muted">xBD</span>
-        </div>
-        <div className="mt-5 grid grid-cols-5 gap-1.5 rounded-xl border border-white/10 bg-background/45 p-2">
-          {Array.from({ length: 35 }).map((_, index) => (
-            <span
-              key={index}
-              className={`aspect-square rounded ${index % 7 === 0 || index % 11 === 0 ? 'bg-accent-secondary/70' : index % 5 === 0 ? 'bg-accent/50' : 'bg-white/10'}`}
-            />
-          ))}
-        </div>
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-          <span className="block h-full w-[69%] rounded-full bg-gradient-to-r from-accent-secondary to-accent" />
-        </div>
-      </div>
-    );
-  }
-
-  if (id === 3) {
-    return (
-      <div className="project-visual h-full min-h-[240px] p-4" aria-label={`${title} visual placeholder`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Route size={18} className="text-accent" aria-hidden="true" />
-            <span className="text-xs uppercase tracking-[0.2em] text-accent">Route Graph</span>
-          </div>
-          <span className="text-xs text-muted">Dijkstra</span>
-        </div>
-        <div className="relative mt-5 h-44 rounded-xl border border-white/10 bg-background/45">
-          <span className="map-route route-a" />
-          <span className="map-route route-b" />
-          {[12, 28, 44, 61, 78].map((left, index) => (
-            <span
-              key={left}
-              className="absolute flex h-7 w-7 items-center justify-center rounded-full border border-accent/40 bg-card text-accent"
-              style={{ left: `${left}%`, top: `${18 + ((index * 19) % 54)}%` }}
-            >
-              <MapPin size={13} aria-hidden="true" />
+            <span className="awaaz-name">
+              awaaz<span>labs</span>
             </span>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="project-visual h-full min-h-[240px] p-4" aria-label={`${title} visual placeholder`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ShieldAlert size={18} className="text-accent" aria-hidden="true" />
-          <span className="text-xs uppercase tracking-[0.2em] text-accent">Response Grid</span>
-        </div>
-        <Activity size={16} className="text-accent" aria-hidden="true" />
-      </div>
-      <div className="mt-5 grid grid-cols-6 gap-1.5 rounded-xl border border-white/10 bg-background/45 p-2">
-        {Array.from({ length: 36 }).map((_, index) => (
-          <span
-            key={index}
-            className={`aspect-square rounded ${index === 8 || index === 15 || index === 27 ? 'bg-accent-secondary/80 shadow-[0_0_18px_rgba(177,73,39,0.4)]' : index % 4 === 0 ? 'bg-accent/35' : 'bg-white/10'}`}
-          />
-        ))}
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <span className="h-10 rounded-lg bg-accent/20" />
-        <span className="h-10 rounded-lg bg-white/10" />
-        <span className="h-10 rounded-lg bg-accent-secondary/20" />
-      </div>
+          </div>
+          <div className="art-flow">
+            <span>Listen</span>
+            <i />
+            <span>Understand</span>
+            <i />
+            <span>Respond</span>
+          </div>
+        </>
+      )}
+      {id === 2 && (
+        <>
+          <span className="project-art-label">A DIFFERENT PERSPECTIVE.</span>
+          <svg viewBox="0 0 600 350" className="earth-art" aria-hidden="true">
+            <defs>
+              <pattern
+                id={terrainId}
+                width="30"
+                height="30"
+                patternUnits="userSpaceOnUse"
+              >
+                <path
+                  d="M0 15H30M15 0V30"
+                  stroke="currentColor"
+                  strokeWidth=".5"
+                  opacity=".3"
+                />
+              </pattern>
+            </defs>
+            <rect
+              x="40"
+              y="5"
+              width="520"
+              height="340"
+              fill={`url(#${terrainId})`}
+            />
+            {Array.from({ length: 14 }, (_, i) => (
+              <path
+                key={i}
+                d={`M${40 + i * 10} ${50 + i * 14} Q${180 - i * 4} ${-40 + i * 20} ${300 + i * 8} ${100 + i * 10} T${550 - i * 5} ${130 + i * 13}`}
+                stroke="currentColor"
+                fill="none"
+                strokeWidth="1.2"
+                opacity=".55"
+              />
+            ))}
+            <rect
+              className="scan-target"
+              x="220"
+              y="100"
+              width="145"
+              height="145"
+              rx="2"
+              fill="#c8a84b"
+              fillOpacity=".12"
+              stroke="#c8a84b"
+              strokeDasharray="6 6"
+            />
+            <circle cx="292" cy="172" r="36" stroke="#c8a84b" />
+            <path d="M280 172H304M292 160V184" stroke="#c8a84b" />
+          </svg>
+          <div className="art-bottom-title">
+            earthscan<span>AI</span>
+          </div>
+        </>
+      )}
+      {id === 3 && (
+        <>
+          <span className="project-art-label">FIND A BETTER WAY.</span>
+          <svg viewBox="0 0 600 350" className="route-art" aria-hidden="true">
+            <g stroke="currentColor" strokeOpacity=".18" fill="none">
+              <path d="M50 280L145 100L250 240L340 65L460 190L550 75M50 280L250 240L460 190M145 100L340 65L550 75M145 100L460 190M250 240L550 75" />
+            </g>
+            <path
+              className="active-route"
+              d="M50 280L145 100L340 65L460 190L550 75"
+              stroke="#efaf75"
+              strokeWidth="3"
+              fill="none"
+            />
+            {[
+              [50, 280],
+              [145, 100],
+              [250, 240],
+              [340, 65],
+              [460, 190],
+              [550, 75],
+            ].map(([x, y], i) => (
+              <g key={i}>
+                <circle cx={x} cy={y} r="13" fill="#283144" stroke="#b0b8cd" />
+                <circle
+                  cx={x}
+                  cy={y}
+                  r="4"
+                  fill={i === 2 ? "#b0b8cd" : "#efaf75"}
+                />
+              </g>
+            ))}
+          </svg>
+          <div className="art-bottom-title">
+            vertex<span>voyage ↗</span>
+          </div>
+        </>
+      )}
+      {id === 4 && (
+        <>
+          <span className="project-art-label">EVERY DECISION CONNECTS.</span>
+          <div className="response-grid" aria-hidden="true">
+            {Array.from({ length: 48 }, (_, i) => (
+              <i
+                key={i}
+                className={
+                  i === 12 || i === 29 || i === 38
+                    ? "response-hot"
+                    : i % 7 === 0
+                      ? "response-route"
+                      : ""
+                }
+              />
+            ))}
+            <span className="response-cross">+</span>
+          </div>
+          <div className="art-bottom-title">
+            AIDRA<span>AI disaster response</span>
+          </div>
+        </>
+      )}
+      <span className="concept-label">Concept illustration</span>
     </div>
   );
 }

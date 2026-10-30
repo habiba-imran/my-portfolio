@@ -1,21 +1,34 @@
-import type { Metadata } from 'next';
-import { Inter, Space_Grotesk } from 'next/font/google';
-import './globals.css';
-import { ThemeProvider } from 'next-themes';
-import { SoundProvider } from '@/context/SoundContext';
+import type { Metadata } from "next";
+import { Onest } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "next-themes";
+import { SoundProvider } from "@/context/SoundContext";
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk' });
+const onest = Onest({
+  subsets: ["latin"],
+  variable: "--font-onest",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: 'Habiba Imran | Software Engineer - AI & Full Stack',
-  description: 'Software engineer building full-stack products, backend APIs, and real-time AI voice systems. CS student at Bahria University.',
+  metadataBase: new URL("https://habiba-imran-portfolio.vercel.app"),
+  title: "Habiba Imran | Software Engineer - AI & Full Stack",
+  description:
+    "Software engineer building full-stack products, backend APIs, and real-time AI voice systems. CS student at Bahria University.",
   openGraph: {
-    images: ['/og-image.png'],
+    title: "Habiba Imran | Software Engineer - AI & Full Stack",
+    description:
+      "Real-time voice AI, thoughtful web apps, and the systems behind them.",
+    url: "https://habiba-imran-portfolio.vercel.app",
+    type: "website",
+    images: ["/og-image.png"],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: "summary_large_image",
+    images: ["/og-image.png"],
   },
+  alternates: { canonical: "/" },
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({
@@ -25,11 +38,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${spaceGrotesk.variable} ${inter.className}`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <SoundProvider>
-            {children}
-          </SoundProvider>
+      <body className={`${onest.variable} ${onest.className}`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <SoundProvider>{children}</SoundProvider>
         </ThemeProvider>
       </body>
     </html>

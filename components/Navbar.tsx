@@ -1,195 +1,141 @@
 "use client";
-import { Menu, X, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
-import { useState, useRef, useEffect, memo } from 'react';
-import { gsap } from 'gsap';
-import { useTheme } from 'next-themes';
-import { useSound } from '../context/SoundContext';
+import { useEffect, useState } from "react";
+import { ArrowUpRight, Moon, Sun, Volume2, VolumeX } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useSound } from "@/context/SoundContext";
+import { navigation, profile } from "@/lib/data";
+import Dialog from "./Dialog";
 
-const navLinks = [
-  { name: 'About', href: '#about' },
-  { name: 'Skills', href: '#skills' },
-  { name: 'Projects', href: '#projects' },
-  { name: 'Experience', href: '#experience' },
-  { name: 'Contact', href: '#contact' },
-];
-
-const NavLink = memo(function NavLink({ name, href, isActive, onHover }: { name: string; href: string, isActive: boolean, onHover: () => void }) {
-  const linkRef = useRef<HTMLAnchorElement>(null);
-
-  useEffect(() => {
-    const link = linkRef.current;
-    if (!link) return;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = link.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-
-      const deltaX = (e.clientX - centerX) * 0.25;
-      const deltaY = (e.clientY - centerY) * 0.25;
-
-      gsap.to(link, {
-        x: deltaX,
-        y: deltaY,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
-    };
-
-    const handleMouseLeave = () => {
-      gsap.to(link, {
-        x: 0,
-        y: 0,
-        duration: 0.4,
-        ease: 'power2.out',
-      });
-    };
-
-    link.addEventListener('mousemove', handleMouseMove);
-    link.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      link.removeEventListener('mousemove', handleMouseMove);
-      link.removeEventListener('mouseleave', handleMouseLeave);
-      gsap.killTweensOf(link);
-    };
-  }, []);
-
-  return (
-    <a
-      ref={linkRef}
-      href={href}
-      onMouseEnter={onHover}
-      className={`relative px-1 py-2 text-sm font-medium transition-colors duration-200 ${isActive ? 'text-accent' : 'text-muted hover:text-foreground'}`}
-    >
-      {name}
-      <span className={`absolute bottom-0 left-1 right-1 h-px origin-left bg-accent transition-transform duration-300 ${isActive ? 'scale-x-100' : 'scale-x-0'}`} />
-    </a>
-  );
-});
-
-const Navbar = memo(function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function Navbar() {
+  const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [activeSection, setActiveSection] = useState("");
-  const { theme, setTheme } = useTheme();
-  const { isMuted, toggleMute, playTick, playWhoosh } = useSound();
-
+  const [active, setActive] = useState("#home");
+  const { resolvedTheme, setTheme } = useTheme();
+  const { isMuted, toggleMute, playTick } = useSound();
   useEffect(() => {
     setMounted(true);
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(`#${entry.target.id}`);
-          }
+          if (entry.isIntersecting) setActive(`#${entry.target.id}`);
         });
       },
-      { rootMargin: "-40% 0px -60% 0px" } // trigger when section is in the top/middle
+      { rootMargin: "-15% 0px -60% 0px" },
     );
-
-    navLinks.forEach((link) => {
-      const section = document.querySelector(link.href);
+    navigation.forEach(({ href }) => {
+      const section = document.querySelector(href);
       if (section) observer.observe(section);
     });
-
     return () => observer.disconnect();
   }, []);
-
-  const handleThemeToggle = () => {
-    playWhoosh();
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
   return (
-    <nav className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-background/72 backdrop-blur-xl" role="navigation" aria-label="Main navigation">
-      <div className="section-padding">
-        <div className="flex items-center justify-between h-16 md:h-20">
-          <a
-            href="#"
-            onMouseEnter={playTick}
-            className="font-display text-lg font-semibold text-foreground transition-colors duration-300 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-            aria-label="Habiba Imran - Home"
-          >
-            Habiba Imran
+    <>
+      <header className="site-header">
+        <div className="container header-inner">
+          <a className="wordmark" href="#home" aria-label="Habiba Imran — home">
+            habiba<span>.</span>
+            <span className="brand-spark" aria-hidden="true">
+              ✳
+            </span>
           </a>
-
-          <div className="flex items-center gap-2 md:gap-8">
-            <div className="hidden md:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <NavLink key={link.name} name={link.name} href={link.href} isActive={activeSection === link.href} onHover={playTick} />
-              ))}
+          <nav className="desktop-nav" aria-label="Main navigation">
+            {navigation.slice(1).map(({ name, href }) => (
               <a
-                href="/Umm-e-Habiba-Imran-CV.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                onMouseEnter={playTick}
-                className="rounded-lg border border-accent/40 bg-accent px-5 py-2.5 text-sm font-semibold text-background shadow-[0_0_24px_rgba(218,168,82,0.18)] transition-colors duration-200 hover:bg-accent/90"
+                key={href}
+                href={href}
+                aria-current={active === href ? "location" : undefined}
               >
-                Download CV
+                {name}
               </a>
-            </div>
-
+            ))}
+          </nav>
+          <div className="header-actions">
+            <a className="header-cv" href={profile.cv} download>
+              Get my CV <ArrowUpRight size={14} aria-hidden="true" />
+            </a>
             <button
-              onClick={toggleMute}
-              className="p-2 text-muted hover:text-accent transition-colors duration-200 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              aria-label={isMuted ? "Unmute sounds" : "Mute sounds"}
+              className="theme-toggle"
+              type="button"
+              aria-label={
+                mounted && resolvedTheme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              onClick={() =>
+                setTheme(resolvedTheme === "dark" ? "light" : "dark")
+              }
             >
-              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              {mounted && resolvedTheme === "dark" ? (
+                <Sun size={17} aria-hidden="true" />
+              ) : (
+                <Moon size={17} aria-hidden="true" />
+              )}
             </button>
-
             <button
-              onClick={handleThemeToggle}
-              className="p-2 text-muted hover:text-accent transition-colors duration-200 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              aria-label={mounted && theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
+              type="button"
+              className="menu-trigger"
+              aria-haspopup="dialog"
+              aria-expanded={open}
+              aria-controls={open ? "site-menu" : undefined}
+              onClick={() => {
+                playTick();
+                setOpen(true);
+              }}
             >
-              {mounted && theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-2 text-foreground hover:text-accent transition-colors duration-200 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-expanded={isOpen}
-              aria-controls="mobile-menu"
-              aria-label={isOpen ? 'Close menu' : 'Open menu'}
-            >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+              Menu{" "}
+              <span className="menu-lines" aria-hidden="true">
+                <i />
+                <i />
+              </span>
             </button>
           </div>
         </div>
-
-        {isOpen && (
-          <div id="mobile-menu" className="md:hidden py-4 border-t border-border/50">
-            <div className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`text-sm font-medium transition-colors duration-200 py-2 px-1 -mx-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${activeSection === link.href ? 'text-accent' : 'text-muted hover:text-accent'}`}
-                >
-                  {link.name}
-                </a>
-              ))}
-              <a
-                href="/Umm-e-Habiba-Imran-CV.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setIsOpen(false)}
-                className="mt-4 w-full text-center py-3 px-4 text-sm font-medium text-background bg-accent hover:bg-accent/90 rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                Download CV
-              </a>
-            </div>
+      </header>
+      {open && (
+        <Dialog titleId="menu-title" fullScreen onClose={() => setOpen(false)}>
+          <div className="menu-top">
+            <span className="wordmark">
+              habiba<span>.</span>
+            </span>
+            <span id="menu-title" className="eyebrow">
+              A little look around
+            </span>
           </div>
-        )}
-      </div>
-    </nav>
+          <nav className="overlay-nav" aria-label="Expanded navigation">
+            {navigation.slice(1).map(({ name, href }, index) => (
+              <a
+                key={href}
+                href={href}
+                style={{ animationDelay: `${index * 65}ms` }}
+                onClick={() => setOpen(false)}
+              >
+                <span className="menu-number">0{index + 1}</span>
+                <span>{name}</span>
+                <ArrowUpRight aria-hidden="true" />
+              </a>
+            ))}
+            <a href="#voice" onClick={() => setOpen(false)}>
+              <span className="menu-number">05</span>
+              <span>Voice lab</span>
+              <ArrowUpRight aria-hidden="true" />
+            </a>
+          </nav>
+          <div className="menu-bottom">
+            <a href={`mailto:${profile.email}`}>{profile.email}</a>
+            <a href={profile.cv} download>
+              Download CV ↗
+            </a>
+            <button type="button" className="sound-toggle" onClick={toggleMute}>
+              {isMuted ? (
+                <VolumeX size={17} aria-hidden="true" />
+              ) : (
+                <Volume2 size={17} aria-hidden="true" />
+              )}
+              Sound {isMuted ? "off" : "on"}
+            </button>
+          </div>
+        </Dialog>
+      )}
+    </>
   );
-});
-
-export default Navbar;
+}

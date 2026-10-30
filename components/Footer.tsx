@@ -1,13 +1,18 @@
+import { ArrowUp } from "lucide-react";
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <footer className="section-padding py-10 md:py-12">
-      <div className="flex flex-col items-center gap-4 text-sm text-muted text-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted/60">
-          Designed and built by Habiba Imran
-        </p>
-        <p className="text-muted/40">Copyright {currentYear}</p>
+    <footer className="site-footer">
+      <div className="container">
+        <div className="footer-wordmark" aria-hidden="true">
+          habiba<span>✳</span>
+        </div>
+        <div className="footer-bottom">
+          <p>© {new Date().getFullYear()} Habiba Imran</p>
+          <span>Designed with intention. Built with curiosity.</span>
+          <a href="#home">
+            Back to top <ArrowUp size={15} aria-hidden="true" />
+          </a>
+        </div>
       </div>
     </footer>
   );

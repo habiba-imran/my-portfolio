@@ -1,5 +1,11 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 
 interface SoundContextType {
   isMuted: boolean;
@@ -11,26 +17,40 @@ interface SoundContextType {
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
-  const [isMuted, setIsMuted] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('isMuted');
-      return saved === 'true';
-    }
-    return false;
-  });
+  const [isMuted, setIsMuted] = useState(true);
+  const [ready, setReady] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    sessionStorage.setItem('isMuted', String(isMuted));
-  }, [isMuted]);
+    try {
+      setIsMuted(sessionStorage.getItem("isMuted") !== "false");
+    } catch {
+      /* Storage can be unavailable. */
+    }
+    setReady(true);
+    return () => {
+      void audioCtxRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (ready) {
+      try {
+        sessionStorage.setItem("isMuted", String(isMuted));
+      } catch {
+        /* Keep the in-memory preference. */
+      }
+    }
+  }, [isMuted, ready]);
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!window.AudioContext) return null;
+      audioCtxRef.current = new window.AudioContext();
     }
-    if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
+    if (audioCtxRef.current.state === "suspended") {
+      void audioCtxRef.current.resume().catch(() => undefined);
     }
     return audioCtxRef.current;
   };
@@ -43,13 +63,13 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     const osc = ctx.createOscillator();
     const gainNode = ctx.createGain();
 
-    osc.type = 'sine';
+    osc.type = "sine";
     // Start at a high frequency and quickly drop (creates a 'click/tick' transient)
     osc.frequency.setValueAtTime(800, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.05);
 
     gainNode.gain.setValueAtTime(0, ctx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.01);
+    gainNode.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.01);
     gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
 
     osc.connect(gainNode);
@@ -77,7 +97,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     // Filter to make it a deep, soft whoosh
     const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
+    filter.type = "lowpass";
     filter.frequency.setValueAtTime(100, ctx.currentTime);
     filter.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1);
     filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.4);
@@ -99,13 +119,13 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     // Initialize audio context on first interaction if turning sound ON
     if (isMuted) {
       initAudio();
-      // Play a tiny tick to confirm unmute
-      setTimeout(playTick, 50);
     }
   };
 
   return (
-    <SoundContext.Provider value={{ isMuted, toggleMute, playTick, playWhoosh }}>
+    <SoundContext.Provider
+      value={{ isMuted, toggleMute, playTick, playWhoosh }}
+    >
       {children}
     </SoundContext.Provider>
   );
@@ -114,7 +134,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 export function useSound() {
   const context = useContext(SoundContext);
   if (context === undefined) {
-    throw new Error('useSound must be used within a SoundProvider');
+    throw new Error("useSound must be used within a SoundProvider");
   }
   return context;
 }
