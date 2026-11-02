@@ -1,18 +1,9 @@
 import { Client, Receiver } from "@upstash/qstash";
 import { ACTIVE_KEY, createLiveKitApi, createRedis } from "./voice-session";
 import { qstashErrorDiagnostics } from "./qstash-diagnostics";
+import { RELEASE_VOICE_RESERVATION } from "./voice-admission";
 
 const cleanupPath = "/api/voice/cleanup";
-const RELEASE = `
-local ipKey = redis.call('HGET', KEYS[2], 'ipKey')
-redis.call('ZREM', KEYS[1], ARGV[1])
-if ipKey then
-  redis.call('ZREM', ipKey, ARGV[1])
-  if redis.call('ZCARD', ipKey) == 0 then redis.call('DEL', ipKey) end
-end
-redis.call('DEL', KEYS[2])
-return 1
-`;
 
 function required(name: string) {
   const value = process.env[name]?.trim();
@@ -118,6 +109,6 @@ export async function cleanupExpiredVoiceSession(sessionId: string, force = fals
     return { cleaned: false, pending: true };
   }
 
-  const released = await redis.eval<unknown[], number>(RELEASE, [ACTIVE_KEY, key], [sessionId]);
+  const released = await redis.eval<unknown[], number>(RELEASE_VOICE_RESERVATION, [ACTIVE_KEY, key], [sessionId]);
   return { cleaned: released === 1, missing: released !== 1 };
 }

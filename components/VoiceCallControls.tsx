@@ -1,256 +1,284 @@
 "use client";
 
 import Script from "next/script";
-import { Mic, MicOff, Phone, PhoneOff } from "lucide-react";
+import { ArrowUpRight, Mic, MicOff, PhoneOff, Volume2 } from "lucide-react";
 import { ParticipantKind, Room, RoomEvent, Track, type RemoteTrack } from "livekit-client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { conversationPhase, friendlyVoiceError, voiceCopy, type VoicePhase } from "../lib/voice-ui";
 
 declare global {
   interface Window {
     turnstile?: {
       render: (container: HTMLElement, options: Record<string, unknown>) => string;
+      execute: (widgetId: string) => void;
       reset: (widgetId?: string) => void;
       remove: (widgetId?: string) => void;
     };
   }
 }
-
-type Phase = "idle" | "connecting" | "waiting" | "listening" | "speaking" | "reconnecting" | "error";
 type Session = { sessionId: string; sessionKey: string };
+type Verification = { resolve: (token: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> };
+class VoiceStartError extends Error {}
 
 export default function VoiceCallControls() {
-  const [phase, setPhase] = useState<Phase>("idle");
+  const [phase, setPhase] = useState<VoicePhase>("ready");
   const [muted, setMuted] = useState(false);
-  const [challenge, setChallenge] = useState("");
   const [error, setError] = useState("");
-  const [securityFailed, setSecurityFailed] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [cleanupPending, setCleanupPending] = useState(false);
+  const [muteBusy, setMuteBusy] = useState(false);
+  const visual = useRef<HTMLDivElement>(null);
+  const widgetContainer = useRef<HTMLDivElement>(null);
+  const widgetId = useRef<string | undefined>(undefined);
+  const verification = useRef<Verification | null>(null);
+  const securityScriptFailed = useRef(false);
   const roomRef = useRef<Room | null>(null);
   const sessionRef = useRef<Session | null>(null);
-  const widgetId = useRef<string | undefined>(undefined);
-  const widgetContainer = useRef<HTMLDivElement>(null);
+  const operation = useRef<Promise<void> | null>(null);
   const mounted = useRef(true);
   const ending = useRef(false);
   const attempt = useRef(0);
   const heartbeat = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-  const deadlineTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const audioElements = useRef<HTMLElement[]>([]);
+  const deadline = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const meter = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const audioElements = useRef<HTMLMediaElement[]>([]);
   const protectionConfigured = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+
+  const settleVerification = useCallback((token?: string) => {
+    const pending = verification.current;
+    verification.current = null;
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    if (token) pending.resolve(token);
+    else pending.reject(new VoiceStartError("We couldn’t complete the quick security check. Please try again."));
+  }, []);
+
+  const renderSecurity = useCallback(() => {
+    if (!widgetContainer.current || !window.turnstile || widgetId.current !== undefined) return;
+    securityScriptFailed.current = false;
+    widgetId.current = window.turnstile.render(widgetContainer.current, {
+      sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+      action: "voice_session",
+      execution: "execute",
+      appearance: "interaction-only",
+      theme: "auto",
+      retry: "never",
+      "refresh-expired": "manual",
+      "response-field": false,
+      callback: (token: string) => settleVerification(token),
+      "expired-callback": () => settleVerification(),
+      "timeout-callback": () => settleVerification(),
+      "error-callback": () => { settleVerification(); return true; },
+    });
+    if (verification.current) window.turnstile.execute(widgetId.current);
+  }, [settleVerification]);
+
+  const getVerification = useCallback(() => new Promise<string>((resolve, reject) => {
+    if (securityScriptFailed.current) {
+      reject(new VoiceStartError("The quick check couldn’t load. Please refresh the page and try again."));
+      return;
+    }
+    verification.current = { resolve, reject, timer: setTimeout(() => settleVerification(), 20_000) };
+    if (widgetId.current !== undefined && window.turnstile) {
+      window.turnstile.reset(widgetId.current);
+      window.turnstile.execute(widgetId.current);
+    } else renderSecurity();
+  }), [renderSecurity, settleVerification]);
 
   const releaseSession = useCallback(async (session: Session) => {
     try {
       const response = await fetch("/api/voice/session/end", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(session),
-        keepalive: true,
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(session), keepalive: true, signal: AbortSignal.timeout(12_000),
       });
       return response.ok || response.status === 404;
-    } catch {
-      // The server lease and scheduled cleanup remain the fallback for a closed tab.
-      return false;
-    }
+    } catch { return false; } // The signed 75-second cleanup lease is the fallback.
   }, []);
 
   const stopRoom = useCallback(() => {
-    if (heartbeat.current) clearInterval(heartbeat.current);
+    clearInterval(heartbeat.current);
+    clearTimeout(deadline.current);
+    clearInterval(meter.current);
     heartbeat.current = undefined;
-    if (deadlineTimer.current) clearTimeout(deadlineTimer.current);
-    deadlineTimer.current = undefined;
+    deadline.current = undefined;
+    meter.current = undefined;
     for (const element of audioElements.current) element.remove();
     audioElements.current = [];
+    visual.current?.style.setProperty("--voice-level", "0");
     const room = roomRef.current;
     roomRef.current = null;
-    if (room) {
-      room.removeAllListeners();
-      void room.disconnect();
-    }
+    if (room) { room.removeAllListeners(); void room.disconnect(); }
   }, []);
 
   const endCall = useCallback(async () => {
     if (ending.current) return;
     ending.current = true;
     attempt.current += 1;
+    settleVerification();
+    if (mounted.current) setPhase("ending");
     stopRoom();
+    // Retain any in-flight creation response so its private control key can be
+    // used to release the reservation. A cancelled attempt never connects.
+    await operation.current;
     const session = sessionRef.current;
     const cleaned = session ? await releaseSession(session) : true;
     if (cleaned) sessionRef.current = null;
     if (mounted.current) {
-      setPhase(cleaned ? "idle" : "error");
       setMuted(false);
-      if (cleaned) {
-        setChallenge("");
-        if (widgetId.current) window.turnstile?.reset(widgetId.current);
-      }
-      if (!cleaned) setError("Disconnected here; server cleanup is pending. Retry cleanup below.");
+      setCleanupPending(!cleaned);
+      setPhase(cleaned ? "ready" : "error");
+      setError(cleaned ? "" : "Your microphone is off. The conversation is still closing; please give it a moment or retry.");
     }
     ending.current = false;
-  }, [releaseSession, stopRoom]);
+  }, [releaseSession, settleVerification, stopRoom]);
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      if (widgetId.current && window.turnstile) window.turnstile.remove(widgetId.current);
-      stopRoom();
-      const session = sessionRef.current;
-      sessionRef.current = null;
-      if (session) void releaseSession(session);
+      void endCall();
+      if (widgetId.current !== undefined) window.turnstile?.remove(widgetId.current);
+      widgetId.current = undefined;
     };
-  }, [releaseSession, stopRoom]);
+  }, [endCall]);
 
-  async function startCall() {
-    if (!challenge || phase === "connecting") return;
-    setError("");
-    setAudioBlocked(false);
-    setPhase("connecting");
+  function startCall() {
+    if (operation.current || roomRef.current || ending.current || sessionRef.current || !protectionConfigured) return;
     const thisAttempt = ++attempt.current;
-    const turnstileToken = challenge;
-    setChallenge("");
-    const room = new Room({ adaptiveStream: true, dynacast: true });
-    roomRef.current = room;
+    const current = () => mounted.current && thisAttempt === attempt.current;
+    setError(""); setCleanupPending(false); setAudioBlocked(false); setPhase("verifying");
+    let room: Room;
+    let unlock: Promise<void>;
     try {
-      // Start during the click gesture so browsers can unlock remote audio playback.
-      await room.startAudio();
-      if (thisAttempt !== attempt.current) return;
-      const response = await fetch("/api/voice/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ turnstileToken }),
-      });
-      const details = await response.json();
-      if (!response.ok) {
-        const stageMessages: Record<string, string> = {
-          configuration: "Voice setup is incomplete in Vercel Production settings.",
-          missing_environment: `Missing or blank Vercel variable(s): ${(details.variables as string[] | undefined)?.join(", ") || "check the voice configuration"}.`,
-          session_secret_too_short: "VOICE_SESSION_HMAC_SECRET must be at least 32 characters.",
-          cleanup_url_invalid: "VOICE_CLEANUP_URL must use HTTPS and end exactly in /api/voice/cleanup.",
-          turnstile_verification: "Cloudflare could not verify the security check. Check the Turnstile hostname and network access.",
-          cleanup_reconciliation: "The voice cleanup service is unavailable. Check Upstash Redis and QStash.",
-          redis_reservation: "The voice session store is unavailable. Check the Upstash Redis connection.",
-          cleanup_schedule: "Delayed cleanup could not be scheduled. Check QStash settings and account limits.",
-          token_issuance: "LiveKit token creation failed. Check the LiveKit server credentials.",
-          agent_dispatch: "The existing LiveKit voice agent could not be reached.",
-        };
-        throw new Error(stageMessages[details.code] || details.error || "The voice session could not start.");
-      }
-      const session: Session = { sessionId: details.sessionId, sessionKey: details.sessionKey };
-      sessionRef.current = session;
-      if (thisAttempt !== attempt.current) {
-        const cleaned = await releaseSession(session);
-        if (cleaned) sessionRef.current = null;
-        else if (mounted.current) {
-          setPhase("error");
-          setError("Connection cancelled; server cleanup is pending. Retry cleanup below.");
-        }
-        return;
-      }
-
-      room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _publication, participant) => {
-        if (track.kind !== Track.Kind.Audio || participant.kind !== ParticipantKind.AGENT) return;
-        const element = track.attach();
-        element.setAttribute("aria-hidden", "true");
-        document.body.appendChild(element);
-        audioElements.current.push(element);
-        setPhase("speaking");
-        void element.play().catch(() => {
-          setAudioBlocked(true);
-        });
-      });
-      room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
-        for (const element of track.detach()) {
-          element.remove();
-          audioElements.current = audioElements.current.filter((item) => item !== element);
-        }
-        setPhase("listening");
-      });
-      room.on(RoomEvent.ParticipantConnected, (participant) => {
-        if (participant.kind === ParticipantKind.AGENT) setPhase("listening");
-      });
-      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-        if (participant.kind === ParticipantKind.AGENT) {
-          setError("The voice agent left the conversation.");
-          void endCall();
-        }
-      });
-      room.on(RoomEvent.Reconnecting, () => setPhase("reconnecting"));
-      room.on(RoomEvent.Reconnected, () => setPhase("listening"));
-      room.on(RoomEvent.Disconnected, () => {
-        if (!ending.current && mounted.current) {
-          stopRoom();
-          const oldSession = sessionRef.current;
-          sessionRef.current = null;
-          if (oldSession) void releaseSession(oldSession);
-          setPhase("error");
-          setError("The connection ended. Please start a new conversation.");
-        }
-      });
-
-      await room.connect(details.serverUrl, details.participantToken);
-      if (thisAttempt !== attempt.current) {
-        stopRoom();
-        const cleaned = await releaseSession(session);
-        if (cleaned) sessionRef.current = null;
-        return;
-      }
-      await room.localParticipant.setMicrophoneEnabled(true);
-      if (!mounted.current) {
-        stopRoom();
-        await releaseSession(session);
-        return;
-      }
-      setMuted(false);
-      let agentConnected = false;
-      room.remoteParticipants.forEach((participant) => {
-        if (participant.kind === ParticipantKind.AGENT) agentConnected = true;
-      });
-      setPhase(agentConnected ? "listening" : "waiting");
-      deadlineTimer.current = setTimeout(() => void endCall(), Math.max(0, details.expiresAt * 1000 - Date.now()));
-      heartbeat.current = setInterval(async () => {
-        try {
-          const beat = await fetch("/api/voice/session/heartbeat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(session),
-          });
-          if (!beat.ok) throw new Error("Lease expired");
-        } catch {
-          ending.current = false;
-          stopRoom();
-          const cleaned = await releaseSession(session);
-          if (cleaned) sessionRef.current = null;
-          setPhase("error");
-          setError(cleaned ? "Your session expired or lost its connection. Please reconnect." : "Your session expired; server cleanup is pending.");
-        }
-      }, 30_000);
-    } catch (reason) {
+      room = new Room({ adaptiveStream: true, dynacast: true });
+      roomRef.current = room;
+      // Run synchronously in the click gesture, before waiting for verification.
+      unlock = room.startAudio().catch(() => { if (current()) setAudioBlocked(true); });
+    } catch {
       stopRoom();
-      const session = sessionRef.current;
-      if (thisAttempt !== attempt.current) {
-        if (session && await releaseSession(session)) sessionRef.current = null;
-        else if (session && mounted.current) {
-          setPhase("error");
-          setError("Connection cancelled; server cleanup is pending. Retry cleanup below.");
-        }
-        return;
-      }
-      if (session && await releaseSession(session)) sessionRef.current = null;
       setPhase("error");
-      setError(reason instanceof Error ? reason.message : "Could not connect to the voice agent.");
-      if (widgetId.current) window.turnstile?.reset(widgetId.current);
+      setError("Voice conversations aren’t supported in this browser. Please try a recent browser with microphone access.");
+      return;
     }
+    operation.current = (async () => {
+      try {
+        await unlock;
+        if (!current()) return;
+        let details;
+        for (let verificationAttempt = 0; verificationAttempt < 2; verificationAttempt++) {
+          const turnstileToken = await getVerification();
+          if (!current()) return;
+          const response = await fetch("/api/voice/session", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ turnstileToken }), signal: AbortSignal.timeout(20_000),
+          });
+          details = await response.json();
+          if (response.ok) {
+            sessionRef.current = { sessionId: details.sessionId, sessionKey: details.sessionKey };
+            break;
+          }
+          if (!current()) return;
+          if (response.status === 403 && details.code === "verification_failed" && verificationAttempt === 0) continue;
+          throw new VoiceStartError(friendlyVoiceError(details.code, response.status));
+        }
+        if (!current()) return;
+        setPhase("connecting");
+        let connected = false;
+        const syncState = () => {
+          if (!current() || !connected) return;
+          const agents = [...room.remoteParticipants.values()].filter((participant) => participant.kind === ParticipantKind.AGENT);
+          setMuted(!room.localParticipant.isMicrophoneEnabled);
+          setPhase(conversationPhase(room.state, agents.length > 0, agents.some((agent) => agent.isSpeaking), room.localParticipant.isMicrophoneEnabled));
+        };
+        room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _publication, participant) => {
+          if (track.kind !== Track.Kind.Audio || participant.kind !== ParticipantKind.AGENT || !current()) return;
+          const element = track.attach();
+          element.setAttribute("aria-hidden", "true");
+          document.body.appendChild(element);
+          audioElements.current.push(element);
+          void element.play().catch(() => { if (current()) setAudioBlocked(true); });
+          syncState();
+        });
+        room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+          for (const element of track.detach()) {
+            element.remove();
+            audioElements.current = audioElements.current.filter((item) => item !== element);
+          }
+          syncState();
+        });
+        room.on(RoomEvent.ParticipantConnected, syncState);
+        room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+          if (participant.kind === ParticipantKind.AGENT && current()) void endCall();
+        });
+        room.on(RoomEvent.ActiveSpeakersChanged, syncState);
+        room.on(RoomEvent.TrackMuted, syncState);
+        room.on(RoomEvent.TrackUnmuted, syncState);
+        room.on(RoomEvent.ConnectionStateChanged, syncState);
+        room.on(RoomEvent.AudioPlaybackStatusChanged, () => { if (current()) setAudioBlocked(!room.canPlaybackAudio); });
+        room.on(RoomEvent.Disconnected, () => { if (current() && !ending.current) void endCall(); });
+        await room.connect(details.serverUrl, details.participantToken, { websocketTimeout: 15_000, peerConnectionTimeout: 15_000 });
+        if (!current()) return;
+        const microphone = await room.localParticipant.setMicrophoneEnabled(true);
+        if (!current()) {
+          microphone?.track?.stop();
+          void room.disconnect();
+          return;
+        }
+        connected = true;
+        syncState();
+        const session = sessionRef.current!;
+        deadline.current = setTimeout(() => void endCall(), Math.max(0, details.expiresAt * 1000 - Date.now()));
+        let beating = false;
+        heartbeat.current = setInterval(async () => {
+          if (beating || !current()) return;
+          beating = true;
+          try {
+            const response = await fetch("/api/voice/session/heartbeat", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(session), signal: AbortSignal.timeout(10_000),
+            });
+            if (!response.ok) throw new Error("Lease unavailable");
+          } catch { if (current()) void endCall(); }
+          finally { beating = false; }
+        }, 30_000);
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        meter.current = setInterval(() => {
+          if (!current() || reducedMotion.matches) return;
+          const agentLevel = Math.max(0, ...[...room.remoteParticipants.values()]
+            .filter((participant) => participant.kind === ParticipantKind.AGENT).map((agent) => agent.audioLevel));
+          const level = Math.max(agentLevel, room.localParticipant.isMicrophoneEnabled ? room.localParticipant.audioLevel : 0);
+          visual.current?.style.setProperty("--voice-level", String(Math.min(1, Math.max(0, level))));
+        }, 90);
+      } catch (reason) {
+        if (!current()) return;
+        stopRoom();
+        const session = sessionRef.current;
+        const cleaned = session ? await releaseSession(session) : true;
+        if (cleaned) sessionRef.current = null;
+        if (!current()) return;
+        setCleanupPending(!cleaned);
+        setPhase("error");
+        const permissionError = reason instanceof Error && ["NotAllowedError", "PermissionDeniedError"].includes(reason.name);
+        setError(permissionError ? "Your microphone is still off. Allow microphone access in your browser, then try again."
+          : reason instanceof VoiceStartError ? reason.message : "The conversation couldn’t connect. Please try again in a moment.");
+      } finally { operation.current = null; }
+    })();
   }
 
   async function toggleMute() {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || muteBusy) return;
+    setMuteBusy(true);
     try {
-      const nextMuted = !muted;
-      await room.localParticipant.setMicrophoneEnabled(!nextMuted);
-      setMuted(nextMuted);
-    } catch {
-      setError("Microphone access changed. Check your browser permissions and try again.");
-    }
+      const microphone = await room.localParticipant.setMicrophoneEnabled(!room.localParticipant.isMicrophoneEnabled);
+      if (roomRef.current !== room) { microphone?.track?.stop(); return; }
+      if (roomRef.current === room) {
+        const agents = [...room.remoteParticipants.values()].filter((participant) => participant.kind === ParticipantKind.AGENT);
+        setMuted(!room.localParticipant.isMicrophoneEnabled);
+        setPhase(conversationPhase(room.state, agents.length > 0, agents.some((agent) => agent.isSpeaking), room.localParticipant.isMicrophoneEnabled));
+      }
+    } catch { if (mounted.current && roomRef.current === room) setError("Your microphone couldn’t change. Check your browser permissions and try again."); }
+    finally { if (mounted.current) setMuteBusy(false); }
   }
 
   async function enableAudio() {
@@ -258,89 +286,47 @@ export default function VoiceCallControls() {
     if (!room) return;
     try {
       await room.startAudio();
-      for (const element of audioElements.current) await (element as HTMLMediaElement).play();
-      setAudioBlocked(false);
-    } catch {
-      setError("Audio is still blocked. Check your browser sound settings.");
-    }
+      for (const element of audioElements.current) await element.play();
+      if (mounted.current && roomRef.current === room) setAudioBlocked(!room.canPlaybackAudio);
+    } catch { if (mounted.current && roomRef.current === room) setError("Sound is still paused. Check your browser’s sound setting and try again."); }
   }
 
-  function retrySecurityCheck() {
-    setSecurityFailed(false);
-    setError("");
-    setChallenge("");
-    if (widgetId.current) window.turnstile?.reset(widgetId.current);
-  }
-
-  const active = phase === "connecting" || phase === "waiting" || phase === "listening" || phase === "speaking" || phase === "reconnecting";
-  const label = phase === "connecting" ? "Connecting…" : phase === "waiting" ? "Waiting for the voice agent…" : phase === "reconnecting" ? "Reconnecting…" : phase === "listening" ? (muted ? "Microphone muted" : "Listening") : phase === "speaking" ? "The agent is speaking" : phase === "error" ? "Connection issue" : protectionConfigured ? "Verify to start" : "Demo setup required";
-
+  const active = !["ready", "error"].includes(phase);
+  const microphoneAvailable = ["waiting", "listening", "speaking", "muted"].includes(phase);
+  const copy = voiceCopy[phase];
   return (
-    <div className={`voice-call voice-call--${phase}`}>
-      {protectionConfigured && <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="afterInteractive"
-        onLoad={() => {
-          if (!widgetContainer.current || !window.turnstile || widgetId.current) return;
-          widgetId.current = window.turnstile.render(widgetContainer.current, {
-            sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-            action: "voice_session",
-            theme: "light",
-            callback: (token: string) => {
-              setSecurityFailed(false);
-              setError("");
-              setChallenge(token);
-            },
-            "expired-callback": () => {
-              setChallenge("");
-              setError("The security check expired. Please verify again.");
-            },
-            "timeout-callback": () => {
-              setChallenge("");
-              setSecurityFailed(true);
-              setError("The security check timed out. Retry, or try a private window or another network.");
-            },
-            "error-callback": (code: string | number) => {
-              setChallenge("");
-              setSecurityFailed(true);
-              setError(`The security check failed (${code}). Retry, or try a private window or another network.`);
-              console.warn("[voice-demo] Turnstile verification failed", code);
-              return true;
-            },
-          });
-        }}
-        onError={() => setError("The security check could not load. Please refresh and try again.")}
-      />}
-      <div className="voice-call-status" aria-live="polite" aria-atomic="true">
-        <span className="voice-call-indicator" aria-hidden="true" />
-        <span>{label}</span>
+    <div className={`voice-call voice-call--${phase}`} data-voice-phase={phase}>
+      {protectionConfigured && <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+        strategy="afterInteractive" onReady={renderSecurity} onError={() => { securityScriptFailed.current = true; settleVerification(); }} />}
+      <div className="voice-orb-scene" ref={visual} aria-hidden="true">
+        <span className="voice-orb-orbit voice-orb-orbit--outer" />
+        <span className="voice-orb-orbit voice-orb-orbit--inner" />
+        <div className="voice-orb"><span>hi<span className="voice-orb-period">.</span></span></div>
+        <span className="voice-orb-spark">✳</span>
+        <div className="voice-levels">{Array.from({ length: 17 }, (_, index) =>
+          <i key={index} style={{ "--bar-weight": 0.3 + Math.sin(index / 16 * Math.PI) * 0.7 } as React.CSSProperties} />)}</div>
       </div>
-      <div className="voice-challenge-wrap" aria-label="Visitor security check" hidden={active}>
-        {protectionConfigured ? <div ref={widgetContainer} /> : <p className="voice-security-unavailable">Security verification isn’t configured yet.</p>}
+      <div className="voice-call-status" role="status" aria-live="polite" aria-atomic="true">
+        <span className="voice-call-indicator" aria-hidden="true" /><span>{copy.label}</span>
       </div>
+      <p className="voice-call-invitation">{copy.text}</p>
+      <div className="voice-verification" ref={widgetContainer} />
       <div className="voice-call-actions" role="group" aria-label="Voice conversation controls">
-        {!active ? (
-          <button className="voice-call-start" type="button" disabled={!challenge} onClick={startCall}>
-            <Phone size={15} aria-hidden="true" />
-            Start a conversation
-          </button>
-        ) : (
-          <>
-            {audioBlocked && <button type="button" className="voice-call-control" onClick={() => void enableAudio()}>Enable audio</button>}
-            <button type="button" className="voice-call-control" onClick={toggleMute} aria-pressed={muted} disabled={phase === "connecting" || phase === "reconnecting"}>
-              {muted ? <MicOff size={16} aria-hidden="true" /> : <Mic size={16} aria-hidden="true" />}
-              {muted ? "Unmute" : "Mute"}
-            </button>
-            <button type="button" className="voice-call-control voice-call-end" onClick={() => void endCall()}>
-              <PhoneOff size={16} aria-hidden="true" /> End
-            </button>
-          </>
-        )}
+        {!active ? <button className="voice-call-start" type="button" disabled={!protectionConfigured || cleanupPending}
+          onClick={startCall}><Mic size={18} aria-hidden="true" />{phase === "error" ? "Try talking again" : "Talk to me"}<ArrowUpRight size={17} aria-hidden="true" /></button>
+          : <>
+            <button type="button" className="voice-call-control" onClick={toggleMute} aria-pressed={muted}
+              aria-label={muted ? "Unmute microphone" : "Mute microphone"} disabled={!microphoneAvailable || muteBusy}>
+              {muted ? <MicOff size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}{muted ? "Unmute" : "Mute"}</button>
+            <button type="button" className="voice-call-control voice-call-end" onClick={() => void endCall()} disabled={phase === "ending"}>
+              <PhoneOff size={18} aria-hidden="true" />{["verifying", "connecting"].includes(phase) ? "Cancel" : "End call"}</button>
+          </>}
       </div>
-      {phase === "error" && error.includes("cleanup is pending") && <button type="button" className="voice-call-retry" onClick={() => void endCall()}>Retry server cleanup</button>}
-      {securityFailed && !active && <button type="button" className="voice-call-retry" onClick={retrySecurityCheck}>Retry security check</button>}
-      <p className="voice-call-note">Your mic turns on only after you start. Sessions end after 5 minutes.</p>
+      {audioBlocked && active && phase !== "ending" && <button type="button" className="voice-call-retry" onClick={() => void enableAudio()}><Volume2 size={16} aria-hidden="true" />Tap to hear the conversation</button>}
       {error && <p className="voice-call-error" role="alert">{error}</p>}
+      {cleanupPending && <button type="button" className="voice-call-retry" onClick={() => void endCall()}>Finish closing the conversation</button>}
+      <p className="voice-call-note">{!protectionConfigured ? "Conversations are unavailable just now." : "Your mic stays off until you start. Up to 5 minutes, just for you."}</p>
+      <a className="voice-privacy-link" href="/privacy">A note on privacy</a>
     </div>
   );
 }

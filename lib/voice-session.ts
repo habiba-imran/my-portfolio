@@ -4,9 +4,8 @@ import { AccessToken, LiveKitAPI, TrackSource } from "livekit-server-sdk";
 
 export const SESSION_SECONDS = 5 * 60;
 const ACTIVE_KEY = "portfolio:voice:active";
-const QUOTA_SECONDS = 26 * 60 * 60;
 
-export type VoiceConfigIssue = "missing_environment" | "session_secret_too_short" | "cleanup_url_invalid";
+export type VoiceConfigIssue = "missing_environment" | "session_secret_too_short" | "cleanup_url_invalid" | "usage_limits_invalid";
 
 export class VoiceConfigError extends Error {
   constructor(
@@ -38,6 +37,12 @@ export function getVoiceConfig() {
   if (missing.length) throw new VoiceConfigError("missing_environment", missing);
   const hmacSecret = process.env.VOICE_SESSION_HMAC_SECRET!.trim();
   if (hmacSecret.length < 32) throw new VoiceConfigError("session_secret_too_short", ["VOICE_SESSION_HMAC_SECRET"]);
+  const dailyBudgetSeconds = Number(process.env.VOICE_DAILY_BUDGET_SECONDS?.trim() ?? "3600");
+  const maxConcurrentSessions = Number(process.env.VOICE_MAX_CONCURRENT_SESSIONS?.trim() ?? "5");
+  if (!Number.isSafeInteger(dailyBudgetSeconds) || dailyBudgetSeconds < 0 || dailyBudgetSeconds > 86400 ||
+      !Number.isSafeInteger(maxConcurrentSessions) || maxConcurrentSessions < 1 || maxConcurrentSessions > 5) {
+    throw new VoiceConfigError("usage_limits_invalid", ["VOICE_DAILY_BUDGET_SECONDS", "VOICE_MAX_CONCURRENT_SESSIONS"]);
+  }
   try {
     const cleanupUrl = new URL(process.env.VOICE_CLEANUP_URL!.trim());
     if (cleanupUrl.protocol !== "https:" || cleanupUrl.pathname !== "/api/voice/cleanup" || cleanupUrl.search || cleanupUrl.hash) {
@@ -55,6 +60,8 @@ export function getVoiceConfig() {
     turnstileSecret: process.env.TURNSTILE_SECRET_KEY!.trim(),
     turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!.trim(),
     hmacSecret,
+    dailyBudgetSeconds,
+    maxConcurrentSessions,
     origins: process.env.VOICE_ALLOWED_ORIGINS!.split(",").map((v) => v.trim()).filter(Boolean),
   };
 }
@@ -174,4 +181,4 @@ export function createLiveKitApi() {
   });
 }
 
-export { ACTIVE_KEY, QUOTA_SECONDS };
+export { ACTIVE_KEY };

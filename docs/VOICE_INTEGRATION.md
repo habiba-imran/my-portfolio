@@ -16,7 +16,7 @@ Deepgram, Groq, or Cartesia provider credentials to this project.
 | `LIVEKIT_URL` | Server | LiveKit Cloud `wss://` URL |
 | `LIVEKIT_API_KEY` | Server | Token signing and room/agent dispatch API |
 | `LIVEKIT_API_SECRET` | Server | Token signing and LiveKit API authentication |
-| `UPSTASH_REDIS_REST_URL` | Server | Redis REST endpoint used for quotas, session leases, and reconciliation state |
+| `UPSTASH_REDIS_REST_URL` | Server | Redis REST endpoint used for shared usage reservations, session leases, and reconciliation state |
 | `UPSTASH_REDIS_REST_TOKEN` | Server | Redis REST credential |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Browser | Cloudflare Turnstile widget site key |
 | `TURNSTILE_SECRET_KEY` | Server | Turnstile Siteverify credential |
@@ -26,6 +26,8 @@ Deepgram, Groq, or Cartesia provider credentials to this project.
 | `QSTASH_CURRENT_SIGNING_KEY` | Server | Verifies current QStash callback signatures |
 | `QSTASH_NEXT_SIGNING_KEY` | Server | Verifies QStash key rotation callbacks |
 | `VOICE_CLEANUP_URL` | Server | Canonical public HTTPS URL ending exactly in `/api/voice/cleanup` |
+| `VOICE_DAILY_BUDGET_SECONDS` | Server, optional | Portfolio-wide maximum-session-time allowance per UTC day; default `3600`, `0` pauses admission |
+| `VOICE_MAX_CONCURRENT_SESSIONS` | Server, optional | Global concurrency cap; default `5`, configurable from `1` to `5` |
 
 Upstash Redis integration may populate the standard `UPSTASH_REDIS_REST_URL` and
 `UPSTASH_REDIS_REST_TOKEN` names automatically. Confirm the names shown in Vercel and add
@@ -73,12 +75,19 @@ delivery/dead-letter state before enabling public use.
 
 - Missing LiveKit, Redis, Turnstile, HMAC, origin, or QStash configuration fails closed.
 - A valid Turnstile token is required before each session. Redis atomically enforces at most
-  five portfolio-wide sessions, one active session per trusted network IP, three starts per
-  ten minutes, and five starts per UTC day per network.
+  five portfolio-wide sessions (or a lower configured cap) and one active session per trusted
+  network IP. The former three-attempts-per-ten-minutes and five-attempts-per-day counters
+  are no longer read or incremented. Existing counter keys can expire naturally.
+- Before provisioning, Redis atomically reserves 300 seconds from the portfolio-wide daily
+  allowance. It defaults to 3,600 maximum session seconds per UTC day (12 successful starts).
+  Successful dispatch commits that allocation once; early End does not refund a successful
+  start. Failed provisioning refunds its allocation, including a lost commit acknowledgement.
+  This is a conservative maximum-session-time allowance, not metered audio time or a provider
+  invoice cap. See [voice experience operations](VOICE_EXPERIENCE.md) for failure handling.
 - Session tokens are room-scoped, microphone-only, and expire after five minutes. Heartbeats
   use a private control key and extend a 75-second cleanup lease only after scheduling works.
 - Explicit End authenticates the session control key and deletes the room before releasing
-  active-session reservations. The daily start quota remains consumed. Repeated cleanup
+  active-session reservations. The shared allocation for a successful start remains consumed. Repeated cleanup
   callbacks and End requests are safe.
 - Redis pseudonymizes network identifiers with HMAC. Production IP identity comes only from
   Vercel's platform-overwritten `x-vercel-forwarded-for`; absent identity denies admission.
@@ -109,7 +118,7 @@ include environment values.
 
 ### Temporary QStash publish diagnostics
 
-If public admission quota is exhausted, use the separately protected, terminal-only
+To test publishing independently of public admission, use the separately protected, terminal-only
 [owner QStash probe](QSTASH_OWNER_DIAGNOSTIC.md). It publishes a signed no-op cleanup message
 without starting a voice session. It is disabled by default and requires an explicit deployment.
 

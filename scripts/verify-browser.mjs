@@ -8,6 +8,7 @@ import { homedir } from "node:os";
 // Dependency-free Chromium acceptance checks, using the browser's DevTools protocol.
 // Override PORTFOLIO_CHROME for your local Chrome/Chromium executable.
 const base = process.env.PORTFOLIO_URL || "http://127.0.0.1:3010";
+assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(new URL(base).hostname), "Browser checks must target a local test server.");
 const browserCache = path.join(
   process.env.LOCALAPPDATA || path.join(homedir(), "AppData/Local"),
   "ms-playwright",
@@ -295,18 +296,18 @@ try {
   );
   assert.match(
     await evaluate(`document.querySelector('.hero-art').textContent`),
-    /VOICE AGENT \/ LIVEKIT/,
+    /A CONVERSATION WITH MY AI/,
   );
   assert.equal(
     await evaluate(
-      `!!document.querySelector('.voice-call-start') && document.querySelector('.voice-call-start').disabled && !!document.querySelector('.voice-call-status')`,
+      `document.querySelector('.voice-call-start')?.textContent.includes('Talk to me') && !!document.querySelector('.voice-call-status[role="status"]') && !!document.querySelector('.voice-privacy-link[href="/privacy"]') && !document.querySelector('.voice-challenge-wrap')`,
     ),
     true,
   );
   assert.equal(
-    await evaluate(`fetch('/api/voice/session', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({turnstileToken:'missing-config-check'})}).then(response => response.status)`),
-    503,
-    "Voice admission fails closed when server protection and service settings are absent",
+    await evaluate(`fetch('/api/voice/session', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({turnstileToken:42})}).then(response => [400,503].includes(response.status))`),
+    true,
+    "Voice admission rejects invalid proofs before any provider provisioning",
   );
 
   await send("Browser.grantPermissions", {
@@ -322,12 +323,25 @@ try {
     "habibaimrannn@gmail.com",
   );
   const wasDark = await evaluate(`document.documentElement.classList.contains('dark')`);
+  async function checkVoiceContrast() {
+    const result = await evaluate(`(() => {
+      const luminance = rgb => rgb.map(v => { const c=v/255; return c<=.04045?c/12.92:((c+.055)/1.055)**2.4; }).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+      const parse = color => color.match(/[0-9.]+/g).slice(0,3).map(Number);
+      const ratio = (a,b) => { const x=luminance(a),y=luminance(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
+      const card = getComputedStyle(document.querySelector('.hero-art--voice'));
+      const stops = [...card.backgroundImage.matchAll(/rgb\\(([^)]+)\\)/g)].map(match=>parse(match[0]));
+      return ['.voice-call-status','.voice-call-invitation','.voice-call-note','.voice-privacy-link'].map(selector=>({selector,contrast:Math.min(...stops.map(background=>ratio(parse(getComputedStyle(document.querySelector(selector)).color),background)))}));
+    })()`);
+    assert.ok(result.every(item => item.contrast >= 4.5), `Voice text contrast: ${JSON.stringify(result)}`);
+  }
+  await checkVoiceContrast();
   await click(".theme-toggle");
   await waitFor(`document.documentElement.classList.contains('dark') === ${!wasDark}`);
+  await checkVoiceContrast();
   await click(".theme-toggle");
   await waitFor(`document.documentElement.classList.contains('dark') === ${wasDark}`);
 
-  const sizes = [360, 390, 430, 768, 1024, 1440, 1920];
+  const sizes = [360, 375, 390, 430, 768, 1024, 1440, 1920];
   const layouts = [];
   for (const width of sizes) {
     await cdp("Emulation.setDeviceMetricsOverride", {
@@ -350,6 +364,13 @@ try {
       layout.titleLines.every((line) => line.content <= line.box + 1),
       `Hero headline clips at ${width}px: ${JSON.stringify(layout)}`,
     );
+    assert.equal(await evaluate(`(() => {
+      const card = document.querySelector('.hero-art--voice').getBoundingClientRect();
+      return [...document.querySelectorAll('.voice-call button, .voice-privacy-link')].every(el => {
+        const box = el.getBoundingClientRect();
+        return box.height >= 44 && box.left >= card.left && box.right <= card.right && box.bottom <= card.bottom;
+      });
+    })()`), true, `Voice controls must fit their card and provide 44px targets at ${width}px`);
     assert.ok(
       await evaluate(
         `!document.querySelector('#voice-heading').innerText.includes('withsomething')`,
@@ -383,6 +404,14 @@ try {
       await waitFor(`!document.querySelector('#site-menu')`);
     }
   }
+  await cdp("Emulation.setDeviceMetricsOverride", { width: 812, height: 375, deviceScaleFactor: 1, mobile: true });
+  assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth + 1`), true, "Landscape layout does not overflow");
+  await evaluate(`document.querySelector('.voice-privacy-link').focus()`);
+  assert.equal(await evaluate(`document.activeElement.className`), "voice-privacy-link");
+  const voiceAccessibility = await cdp("Accessibility.getFullAXTree");
+  assert.ok(voiceAccessibility.nodes.some(node => node.role?.value === "button" && node.name?.value === "Talk to me"), "Voice start control has an accessible name");
+  assert.equal((await fetch(`${base}/privacy`)).status, 200);
+  assert.match(await (await fetch(`${base}/privacy`)).text(), /Cloudflare Turnstile Privacy Addendum/);
   await cdp("Emulation.setEmulatedMedia", {
     features: [{ name: "prefers-reduced-motion", value: "reduce" }],
   });

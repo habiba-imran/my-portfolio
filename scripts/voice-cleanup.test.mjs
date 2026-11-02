@@ -1,29 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import { runInThisContext } from "node:vm";
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, mock, test } from "node:test";
-import ts from "typescript";
+import { loadTypeScript } from "./test-typescript.mjs";
 import { diagnoseQstash } from "./diagnose-qstash.mjs";
 
 const require = createRequire(import.meta.url);
 const { QstashError, QstashDailyRatelimitError } = require("@upstash/qstash");
-
-// Compile the production TS in memory using the project's existing compiler.
-// Exercise the installed SDK; replace only Redis/LiveKit, which must never run.
-function loadTypeScript(relativePath, overrides = {}) {
-  const filename = fileURLToPath(new URL(relativePath, import.meta.url));
-  const compiled = ts.transpileModule(readFileSync(filename, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-    fileName: filename,
-  }).outputText;
-  const compiledModule = { exports: {} };
-  const wrapper = runInThisContext(`(function(require, module, exports) {${compiled}\n})`, { filename });
-  wrapper((name) => Object.hasOwn(overrides, name) ? overrides[name] : require(name), compiledModule, compiledModule.exports);
-  return compiledModule.exports;
-}
 
 const { qstashErrorDiagnostics } = loadTypeScript("../lib/qstash-diagnostics.ts");
 const ownerAuth = loadTypeScript("../lib/qstash-owner-auth.ts");

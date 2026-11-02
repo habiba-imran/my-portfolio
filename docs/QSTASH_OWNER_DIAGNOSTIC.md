@@ -1,8 +1,8 @@
 # Temporary owner-only QStash probe
 
 This isolates the QStash publish failure from voice admission. It does not start a voice
-session, verify Turnstile, reserve a lease, access Redis, or call LiveKit. Public limits,
-daily quotas and normal cleanup are unchanged. A successful probe does consume a QStash
+session, verify Turnstile, reserve a lease, access Redis, or call LiveKit. The probe does not
+consume the shared voice allowance or a concurrency slot. A successful probe does consume a QStash
 message/delivery allowance; it does not bypass QStash limits. Do not loop the command.
 
 The protected production probe confirmed HTTP 400 with

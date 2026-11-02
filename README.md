@@ -27,10 +27,11 @@ Validation:
 ```bash
 npm run lint
 npm run typecheck
+npm run test:voice
 npm run build
 ```
 
-The build also runs lint and TypeScript validation and generates the existing production sitemap/robots files. The standard Next.js Vercel deployment remains unchanged. Google Fonts is needed at build time; Next.js self-hosts the selected Onest font for visitors.
+Run lint separately. The build checks TypeScript and generates the production sitemap/robots files. The standard Next.js Vercel deployment remains unchanged. Google Fonts is needed at build time; Next.js self-hosts the selected Onest font for visitors.
 
 ## Browser acceptance checks
 
@@ -48,7 +49,7 @@ npm run test:browser
 
 The dependency-free Node script uses an installed Chrome/Chromium/Edge via its DevTools protocol. It detects standard Windows Chrome/Edge paths, cached Windows Playwright Chromium, or common Linux Chromium paths. Set `PORTFOLIO_CHROME` to override the executable and `PORTFOLIO_URL` to override the server URL. It launches an isolated, hidden headless browser and does not use your personal browser profile. Outputs go to ignored `.qa/`.
 
-Checks cover all four case studies, menu/keyboard focus and restoration, scroll lock, expertise disclosure, artwork modes, honest voice preview states, clipboard, light/dark theme, anchors, CV/assets, widths from 360 to 1920px, reduced motion, and readable server-rendered content without JavaScript. These are local browser checks; they do not establish real-device or hosted mobile performance.
+Checks cover all four case studies, menu/keyboard focus and restoration, scroll lock, expertise disclosure, the hero voice interface, privacy disclosure, clipboard, light/dark theme, anchors, CV/assets, widths from 360 to 1920px including 375px and landscape, reduced motion, and readable server-rendered content without JavaScript. The script requires a local server URL. These checks do not establish real-device performance or live voice quality.
 
 ## Content
 
@@ -64,6 +65,6 @@ Main portfolio content and presentation live in:
 
 The portrait, CV, and social preview are preserved. Original project artwork is visibly labeled **Concept illustration**. Add authorized screenshots in `public/projects/` and assign each project’s `image` path in `lib/data.ts` to replace card artwork. Do not publish employer UI, client data, source code, or recordings without authorization.
 
-The voice section is an interactive architecture explorer, explicitly marked **Personal live demo coming soon**. The owner confirmed the independent LiveKit worker is not ready. No microphone permissions are requested, no live session is simulated, and no secrets or dummy token endpoint are included. Future integration needs a deployed worker and secure ephemeral-token service, followed by actual microphone, playback, cancellation, and error testing.
+The hero “hi” panel connects to the existing LiveKit Cloud `voiceagent` through protected server-issued scoped tokens. The lower voice section remains an architecture explorer. Turnstile verifies each start; Redis and signed QStash callbacks protect session cleanup. Per-visitor attempt quotas have been replaced by a configurable shared maximum-session-time allowance (60 minutes per UTC day by default), alongside one active session per network and five globally. Failed provisioning refunds its allocation. The worker is not hosted or changed here. See [voice experience operations](docs/VOICE_EXPERIENCE.md) for Invisible Turnstile dashboard setup, privacy disclosure, cost safeguards and verification limits.
 
 Current website employment titles and all dates remain intact pending the owner's updated titles. See `REDESIGN_NOTES.md` for the audit, design decisions, and outstanding inputs.
