@@ -55,8 +55,10 @@ return 1
 `;
 
 export async function POST(request: Request) {
+  let stage = "configuration";
   try {
     const config = getVoiceConfig();
+    stage = "request_validation";
     const origin = getOrigin(request, config.origins);
     const ip = getClientIp(request);
     if (!origin || !ip) return NextResponse.json({ error: "Voice sessions are unavailable." }, { status: 403 });
@@ -65,13 +67,16 @@ export async function POST(request: Request) {
     if (typeof payload.turnstileToken !== "string" || payload.turnstileToken.length > 2048) {
       return NextResponse.json({ error: "Complete the security check to continue." }, { status: 400 });
     }
+    stage = "turnstile_verification";
     if (!(await verifyTurnstile(payload.turnstileToken, ip, origin))) {
       return NextResponse.json({ error: "The security check expired. Please try again." }, { status: 403 });
     }
 
     // Also adopt any pre-QStash expired leases left by an earlier deployment.
+    stage = "cleanup_reconciliation";
     await scheduleExpiredVoiceReconciliation();
 
+    stage = "redis_reservation";
     const redis = createRedis();
     const ipHash = hashValue(ip, config.hmacSecret);
     const sessionId = newId();
@@ -102,9 +107,12 @@ export async function POST(request: Request) {
 
     let cleanupScheduled = false;
     try {
+      stage = "cleanup_schedule";
       await scheduleVoiceCleanup(sessionId, 75, "initial");
       cleanupScheduled = true;
+      stage = "token_issuance";
       const token = await issueLiveKitToken(roomName, identity);
+      stage = "agent_dispatch";
       const livekit = createLiveKitApi();
       await livekit.agentDispatch.createDispatch(roomName, "voiceagent");
       return NextResponse.json({
@@ -115,6 +123,7 @@ export async function POST(request: Request) {
         expiresAt: hardExpiry,
       }, { headers: { "Cache-Control": "no-store" } });
     } catch {
+      console.error("[voice-session] provisioning failed", { stage });
       if (!cleanupScheduled) {
         await redis.eval<unknown[], number>(RELEASE_UNDISPATCHED, [ACTIVE_KEY, `portfolio:voice:session:${sessionId}`], [sessionId]);
       }
@@ -123,6 +132,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "The voice agent could not be reached. Please try again." }, { status: 503 });
     }
   } catch {
+    // Keep credentials and request data out of logs; the stage pinpoints which
+    // Vercel setting or dependency to inspect when admission fails closed.
+    console.error("[voice-session] admission unavailable", { stage });
     return NextResponse.json({ error: "Voice sessions are temporarily unavailable." }, { status: 503 });
   }
 }

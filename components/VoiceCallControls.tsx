@@ -23,6 +23,7 @@ export default function VoiceCallControls() {
   const [muted, setMuted] = useState(false);
   const [challenge, setChallenge] = useState("");
   const [error, setError] = useState("");
+  const [securityFailed, setSecurityFailed] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const roomRef = useRef<Room | null>(null);
   const sessionRef = useRef<Session | null>(null);
@@ -250,6 +251,13 @@ export default function VoiceCallControls() {
     }
   }
 
+  function retrySecurityCheck() {
+    setSecurityFailed(false);
+    setError("");
+    setChallenge("");
+    if (widgetId.current) window.turnstile?.reset(widgetId.current);
+  }
+
   const active = phase === "connecting" || phase === "waiting" || phase === "listening" || phase === "speaking" || phase === "reconnecting";
   const label = phase === "connecting" ? "Connecting…" : phase === "waiting" ? "Waiting for the voice agent…" : phase === "reconnecting" ? "Reconnecting…" : phase === "listening" ? (muted ? "Microphone muted" : "Listening") : phase === "speaking" ? "The agent is speaking" : phase === "error" ? "Connection issue" : protectionConfigured ? "Verify to start" : "Demo setup required";
 
@@ -264,9 +272,27 @@ export default function VoiceCallControls() {
             sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
             action: "voice_session",
             theme: "light",
-            callback: (token: string) => setChallenge(token),
-            "expired-callback": () => setChallenge(""),
-            "error-callback": () => setError("The security check could not load. Please refresh and try again."),
+            callback: (token: string) => {
+              setSecurityFailed(false);
+              setError("");
+              setChallenge(token);
+            },
+            "expired-callback": () => {
+              setChallenge("");
+              setError("The security check expired. Please verify again.");
+            },
+            "timeout-callback": () => {
+              setChallenge("");
+              setSecurityFailed(true);
+              setError("The security check timed out. Retry, or try a private window or another network.");
+            },
+            "error-callback": (code: string | number) => {
+              setChallenge("");
+              setSecurityFailed(true);
+              setError(`The security check failed (${code}). Retry, or try a private window or another network.`);
+              console.warn("[voice-demo] Turnstile verification failed", code);
+              return true;
+            },
           });
         }}
         onError={() => setError("The security check could not load. Please refresh and try again.")}
@@ -298,6 +324,7 @@ export default function VoiceCallControls() {
         )}
       </div>
       {phase === "error" && error.includes("cleanup is pending") && <button type="button" className="voice-call-retry" onClick={() => void endCall()}>Retry server cleanup</button>}
+      {securityFailed && !active && <button type="button" className="voice-call-retry" onClick={retrySecurityCheck}>Retry security check</button>}
       <p className="voice-call-note">Your mic turns on only after you start. Sessions end after 5 minutes.</p>
       {error && <p className="voice-call-error" role="alert">{error}</p>}
     </div>

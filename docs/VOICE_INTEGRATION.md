@@ -90,3 +90,22 @@ delivery/dead-letter state before enabling public use.
 Local offline builds and tests cannot prove microphone permission, LiveKit dispatch, worker
 readiness, audible playback, QStash delivery, or production abuse limits. The first real
 microphone test should happen only after the configuration checklist above is complete.
+
+## Production troubleshooting
+
+No separate terminal or local worker is needed for the deployed site. The session and cleanup
+handlers run as Vercel serverless routes. A 503 from `/api/voice/session` means admission
+failed closed. Check Vercel → Logs for `[voice-session] admission unavailable` and its
+`stage`; logs intentionally include no credentials or request contents. `configuration`
+means a required environment variable is missing or malformed; `turnstile_verification`
+means Siteverify could not complete; `cleanup_reconciliation` / `cleanup_schedule` points to
+QStash or Redis; `redis_reservation` points to Redis; `token_issuance` or `agent_dispatch`
+points to LiveKit. Confirm Vercel Production has all variables in the table above, including
+the four QStash settings, then redeploy after changing them.
+
+If Turnstile remains on “Verifying”, use the displayed Turnstile error code and confirm the
+site key authorizes the deployed hostname in Cloudflare. Retry after checking extensions,
+VPN/proxy, browser clock, and network access to `challenges.cloudflare.com`. The console's
+`normal?lang=auto` challenge CSP messages are emitted by Turnstile's challenge context; this
+repository does not set a page CSP. Do not weaken the API's server-side Turnstile check to
+work around a browser challenge failure.
