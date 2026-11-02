@@ -41,7 +41,7 @@ export default function RootLayout({
       <body className={`${onest.variable} ${onest.className}`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem={false}
           disableTransitionOnChange
         >

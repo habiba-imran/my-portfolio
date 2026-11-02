@@ -59,10 +59,6 @@ export default function VoiceDemo() {
             I’m especially interested in what happens when an interface becomes
             a conversation. Here’s a look inside a real-time voice AI pipeline.
           </p>
-          <span className="coming-soon">
-            <span aria-hidden="true" />
-            Personal live demo coming soon
-          </span>
           <a className="text-link" href="#projects">
             Explore my voice AI work{" "}
             <ArrowUpRight size={17} aria-hidden="true" />
@@ -119,10 +115,6 @@ export default function VoiceDemo() {
             <h3>{current.name}</h3>
             <p>{current.text}</p>
           </div>
-          <p className="voice-disclosure">
-            An interactive architecture preview. No microphone access or live
-            connection.
-          </p>
         </div>
       </div>
     </section>

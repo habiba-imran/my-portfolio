@@ -1247,10 +1247,10 @@ h1 {
   transition: background 0.35s;
 }
 .expertise-row:hover,
-.expertise-row[open] {
+.expertise-row.is-open {
   background: var(--surface-strong);
 }
-.expertise-row summary {
+.expertise-summary {
   display: grid;
   grid-template-columns: 38px 1fr auto 45px;
   gap: 22px;
@@ -1259,9 +1259,18 @@ h1 {
   list-style: none;
   min-height: 126px;
   padding: 24px 15px;
+  width: 100%;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
 }
-.expertise-row summary::-webkit-details-marker {
-  display: none;
+.expertise-summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -3px;
 }
 .row-number {
   color: var(--muted);
@@ -1301,7 +1310,7 @@ h1 {
     transform 0.4s var(--ease),
     background 0.3s;
 }
-.expertise-row[open] .expand-icon {
+.expertise-row.is-open .expand-icon {
   transform: rotate(45deg);
   background: var(--ink);
   color: var(--page);
@@ -1311,6 +1320,16 @@ h1 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 45px;
+}
+.expertise-panel {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.5s var(--ease), opacity 0.25s ease;
+}
+.expertise-row.is-open .expertise-panel {
+  max-height: 600px;
+  opacity: 1;
 }
 .expertise-detail p {
   color: var(--muted);
@@ -1463,19 +1482,6 @@ h1 {
   color: var(--muted);
   max-width: 350px;
   margin-top: 25px;
-}
-.coming-soon {
-  margin-top: 25px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 10px;
-}
-.coming-soon > span {
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
-  border-radius: 50%;
 }
 .voice-copy > .text-link {
   margin-top: 12px;
@@ -1861,7 +1867,7 @@ h1 {
   .pill-wide {
     gap: 15px;
   }
-  .expertise-row summary {
+  .expertise-summary {
     grid-template-columns: 24px 1fr 44px;
     gap: 18px;
   }
@@ -2129,7 +2135,7 @@ h1 {
   .project-meta a {
     min-height: 44px;
   }
-  .expertise-row summary {
+  .expertise-summary {
     min-height: 115px;
     gap: 13px;
     padding-inline: 4px;

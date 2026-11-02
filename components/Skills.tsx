@@ -1,6 +1,9 @@
+"use client";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { expertise } from "@/lib/data";
 export default function Skills() {
+  const [openItems, setOpenItems] = useState<string[]>([]);
   return (
     <section
       id="skills"
@@ -24,8 +27,8 @@ export default function Skills() {
         </div>
         <div className="expertise-rows">
           {expertise.map((item, index) => (
-            <details key={item.title} className="expertise-row" data-reveal>
-              <summary>
+            <div key={item.title} className={`expertise-row${openItems.includes(item.title) ? " is-open" : ""}`} data-reveal>
+              <button className="expertise-summary" type="button" aria-expanded={openItems.includes(item.title)} onClick={() => setOpenItems((current) => current.includes(item.title) ? current.filter((title) => title !== item.title) : [...current, item.title])}>
                 <span className="row-number">0{index + 1}</span>
                 <span className="expertise-title">
                   {item.title}
@@ -35,7 +38,8 @@ export default function Skills() {
                 <span className="expand-icon">
                   <Plus size={22} aria-hidden="true" />
                 </span>
-              </summary>
+              </button>
+              <div className="expertise-panel" aria-hidden={!openItems.includes(item.title)}>
               <div className="expertise-detail">
                 <p>{item.description}</p>
                 <ul>
@@ -44,7 +48,8 @@ export default function Skills() {
                   ))}
                 </ul>
               </div>
-            </details>
+              </div>
+            </div>
           ))}
         </div>
       </div>
