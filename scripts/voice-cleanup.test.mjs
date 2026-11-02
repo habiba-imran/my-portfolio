@@ -29,7 +29,7 @@ const { qstashErrorDiagnostics } = loadTypeScript("../lib/qstash-diagnostics.ts"
 const ownerAuth = loadTypeScript("../lib/qstash-owner-auth.ts");
 const { ownerDiagnosticSignature, authorizeOwnerDiagnostic, QSTASH_DIAGNOSTIC_SESSION_ID, QSTASH_DIAGNOSTIC_PATH } = ownerAuth;
 const noProviderCalls = () => { throw new Error("Redis/LiveKit calls are forbidden in this test"); };
-const { scheduleVoiceCleanup, cleanupCallbackUrl, qstashReceiver } = loadTypeScript("../lib/voice-cleanup.ts", {
+const { scheduleVoiceCleanup, cleanupDeduplicationId, cleanupCallbackUrl, qstashReceiver } = loadTypeScript("../lib/voice-cleanup.ts", {
   "./voice-session": {
     ACTIVE_KEY: "unused",
     createRedis: noProviderCalls,
@@ -38,7 +38,7 @@ const { scheduleVoiceCleanup, cleanupCallbackUrl, qstashReceiver } = loadTypeScr
   "./qstash-diagnostics": { qstashErrorDiagnostics },
 });
 const { POST: publishProbe } = loadTypeScript("../app/api/voice/diagnostic/route.ts", {
-  "../../../../lib/voice-cleanup": { scheduleVoiceCleanup },
+  "../../../../lib/voice-cleanup": { scheduleVoiceCleanup, cleanupDeduplicationId },
   "../../../../lib/qstash-diagnostics": { qstashErrorDiagnostics },
   "../../../../lib/qstash-owner-auth": ownerAuth,
 });
@@ -88,7 +88,12 @@ afterEach(() => {
 });
 
 function response(body, status = 200, headers = {}) {
-  fetch.mock.mockImplementation(async () => new Response(body, { status, headers }));
+  fetch.mock.mockImplementation(async (_url, options) => {
+    // Check the actual SDK-emitted header on every mocked QStash publish,
+    // including rejection, reconciliation, retry and protected-probe cases.
+    assert.match(options.headers.get("Upstash-Deduplication-Id"), /^[A-Za-z0-9_-]{1,100}$/);
+    return new Response(body, { status, headers });
+  });
 }
 
 function diagnostic() {
@@ -109,7 +114,7 @@ test("installed SDK sends the full destination URL, seconds, retries and stable 
   assert.equal(options.headers.get("Authorization"), `Bearer ${testEnvironment.QSTASH_TOKEN}`);
   assert.equal(options.headers.get("Upstash-Delay"), "75s");
   assert.equal(options.headers.get("Upstash-Retries"), "3");
-  assert.equal(options.headers.get("Upstash-Deduplication-Id"), `${sessionId}:initial`);
+  assert.equal(options.headers.get("Upstash-Deduplication-Id"), `${sessionId}-initial`);
   assert.equal(options.body, JSON.stringify({ sessionId }));
   assert.equal(console.error.mock.callCount(), 0);
 });
@@ -124,8 +129,32 @@ test("reconciliation, heartbeat and bounded cleanup retry delays retain their sc
     const options = fetch.mock.calls.at(-1).arguments[1];
     assert.equal(options.headers.get("Upstash-Delay"), header);
     assert.equal(options.headers.get("Upstash-Retries"), "3");
-    assert.equal(options.headers.get("Upstash-Deduplication-Id"), `${sessionId}:${tag}`);
+    assert.equal(options.headers.get("Upstash-Deduplication-Id"), `${sessionId}-${tag}`);
   }
+});
+
+test("cleanup IDs use a stable bounded format for base64url sessions and distinct cleanup purposes", async () => {
+  response('{"messageId":"offline-message"}');
+  const base64urlSession = "AbCdEfGhIjKlMnOpQrStUv_-";
+  const tags = ["initial", "lease-1800000075", "legacy-reconcile", "retry-1", "retry-2", `probe-1800000000-${"a".repeat(32)}`];
+  const ids = [];
+  for (const tag of tags) {
+    await scheduleVoiceCleanup(base64urlSession, 75, tag);
+    const id = fetch.mock.calls.at(-1).arguments[1].headers.get("Upstash-Deduplication-Id");
+    assert.equal(id, `${base64urlSession}-${tag}`);
+    ids.push(id);
+  }
+  assert.equal(new Set(ids).size, tags.length);
+  await scheduleVoiceCleanup(base64urlSession, 75, tags[0]);
+  assert.equal(fetch.mock.calls.at(-1).arguments[1].headers.get("Upstash-Deduplication-Id"), ids[0]);
+});
+
+test("unexpected deduplication characters are rejected before any QStash request", async () => {
+  for (const value of ["bad:component", "bad/component", "bad component", "bad.component", "bad\ncomponent", "badécomponent", ""]) {
+    await assert.rejects(scheduleVoiceCleanup(value, 75, "initial"), /Invalid voice cleanup deduplication ID/);
+    await assert.rejects(scheduleVoiceCleanup(sessionId, 75, value), /Invalid voice cleanup deduplication ID/);
+  }
+  assert.equal(fetch.mock.callCount(), 0);
 });
 
 test("deduplication ID is bounded and 202 duplicate acceptance remains successful", async () => {
@@ -164,7 +193,7 @@ test("HTTP 400 exposes sanitized service fields and is rethrown without retrying
 
 test("diagnostics redact credentials, identifiers, URLs, JWTs and ignored response fields", async () => {
   const opaque = "eyJhbGciOiJIUzI1NiJ9.eyJzZWNyZXQiOiJ0ZXN0In0.signature";
-  const sensitive = [...Object.values(testEnvironment).filter((value) => value?.startsWith("synthetic-")), sessionId, `${sessionId}:initial`, opaque];
+  const sensitive = [...Object.values(testEnvironment).filter((value) => value?.startsWith("synthetic-")), sessionId, `${sessionId}-initial`, opaque];
   response(JSON.stringify({
     code: "INVALID_REQUEST",
     error: `Invalid destination ${callbackUrl}?token=private ${sensitive.join(" ")} private-person@example.com arbitraryPayloadValue`,
@@ -296,7 +325,7 @@ test("authorized probe publishes exactly one reserved message with normal delay/
   assert.equal(options.headers.get("Upstash-Delay"), "75s");
   assert.equal(options.headers.get("Upstash-Retries"), "3");
   const dedupe = options.headers.get("Upstash-Deduplication-Id");
-  assert.equal(dedupe, `${QSTASH_DIAGNOSTIC_SESSION_ID}:probe-${timestamp}-${"a".repeat(32)}`);
+  assert.equal(dedupe, `${QSTASH_DIAGNOSTIC_SESSION_ID}-probe-${timestamp}-${"a".repeat(32)}`);
   assert.ok(dedupe.length <= 100);
   response('{"messageId":"offline-probe","deduplicated":true}', 202);
   const replay = await publishProbe(ownerRequest({ timestamp }));
@@ -322,6 +351,17 @@ test("owner probe returns only sanitized QStash rejection fields, including actu
   response('{"error":"Rate limit exceeded"}', 429);
   assert.equal((await (await publishProbe(ownerRequest())).json()).httpStatus, 429);
   assert.equal(fetch.mock.callCount(), 2);
+});
+
+test("owner probe redacts the complete hyphenated deduplication ID from service reasons", async () => {
+  process.env.VOICE_QSTASH_DIAGNOSTIC_ENABLED = "1";
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const id = `${QSTASH_DIAGNOSTIC_SESSION_ID}-probe-${timestamp}-${"a".repeat(32)}`;
+  response(JSON.stringify({ error: `Invalid deduplication ID ${id}` }), 400);
+  const result = await (await publishProbe(ownerRequest({ timestamp }))).json();
+  assert.equal(result.httpStatus, 400);
+  assert.equal(result.serviceReason, "Invalid deduplication ID [redacted]");
+  assert.ok(!JSON.stringify(result).includes(id));
 });
 
 async function signedCleanupRequest(payload, { key = testEnvironment.QSTASH_CURRENT_SIGNING_KEY, destination = callbackUrl, signedBody } = {}) {

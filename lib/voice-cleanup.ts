@@ -35,6 +35,15 @@ export function qstashReceiver() {
   });
 }
 
+export function cleanupDeduplicationId(sessionId: string, dedupeTag: string) {
+  // QStash rejects colons. Keep both components in a conservative URL-safe
+  // alphabet; reject unexpected characters instead of normalizing to collisions.
+  if (!/^[A-Za-z0-9_-]+$/.test(sessionId) || !/^[A-Za-z0-9_-]+$/.test(dedupeTag)) {
+    throw new Error("Invalid voice cleanup deduplication ID.");
+  }
+  return `${sessionId}-${dedupeTag}`.slice(0, 100);
+}
+
 export async function scheduleVoiceCleanup(sessionId: string, delaySeconds: number, dedupeTag: string) {
   const client = new Client({ token: required("QSTASH_TOKEN") });
   const request = {
@@ -44,7 +53,7 @@ export async function scheduleVoiceCleanup(sessionId: string, delaySeconds: numb
     // QStash's default of three is available on its free tier. Persistent
     // cleanup retries are scheduled by Redis state below, not by raising this.
     retries: 3,
-    deduplicationId: `${sessionId}:${dedupeTag}`.slice(0, 100),
+    deduplicationId: cleanupDeduplicationId(sessionId, dedupeTag),
   };
   try {
     return await client.publishJSON(request);

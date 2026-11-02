@@ -5,10 +5,14 @@ session, verify Turnstile, reserve a lease, access Redis, or call LiveKit. Publi
 daily quotas and normal cleanup are unchanged. A successful probe does consume a QStash
 message/delivery allowance; it does not bypass QStash limits. Do not loop the command.
 
-The inspected production commit was `d8970ac889b7d9ac97e1d42302225f4dc156d3f0`, with a
-successful Vercel status. It has the sanitized publish-failure logger but no owner probe.
-The new probe must be deliberately deployed before the terminal command can use it.
-Implementation and offline tests do not establish the cause of the live HTTP 400.
+The protected production probe confirmed HTTP 400 with
+`DeduplicationId cannot [redacted] ':'`: the `<sessionId>:<tag>` separator was rejected.
+The shared cleanup publisher now uses `<sessionId>-<tag>`, requires non-empty components
+containing only ASCII letters, digits, `_` and `-`, and retains the 100-character bound.
+This is a conservative application alphabet, not a claim that these are the only characters
+the service accepts. The same builder serves every cleanup/probe publish and diagnostic
+redaction. Offline regressions check the actual SDK-emitted header; production acceptance
+of the corrected ID still needs the single controlled validation below.
 
 ## Protection and message behavior
 
@@ -43,6 +47,9 @@ Implementation and offline tests do not establish the cause of the live HTTP 400
    `VOICE_QSTASH_DIAGNOSTIC_ENABLED=1` in Vercel's server-side Production environment. Use the
    canonical deployment origin, not a redirecting alias. Do not change any existing credential,
    signing key, origin list, quota or rate setting. Nothing in this implementation deploys itself.
+   For this fix, first verify the active Vercel Production deployment contains the commit that
+   changes the separator to `-`. If Git integration deployed it, no additional deployment is
+   needed. Keep the existing owner enablement available for this one validation.
 2. In the local repository, use Node **22.18+** (tested on 24) and installed project dependencies.
    The runner calls your deployed endpoint; it does not need your QStash or LiveKit keys locally.
    Obtain the existing `VOICE_SESSION_HMAC_SECRET` privately from the owner-accessible Vercel
@@ -89,6 +96,11 @@ Implementation and offline tests do not establish the cause of the live HTTP 400
    may report `deduplicated: true`. This confirms acceptance, not delivery: check the delayed
    callback's successful delivery separately in the owner QStash console after 75 seconds.
    The signed callback returns `{ "cleaned": true, "diagnostic": true }`.
+   Run the command **once**, wait at least 75 seconds, and verify that exact reserved probe
+   body and successful no-op callback in the QStash console. Do not start a public voice
+   session or repeat the probe automatically. If publishing fails, capture the sanitized JSON
+   and inspect that rejection before another attempt. Retain the diagnostic until this check
+   is complete; disable/remove it afterward using the steps below.
 
    A 404 means the endpoint is disabled, not yet deployed, or authorization failed. A 502 with
    null QStash status means no service rejection status was available (for example missing
@@ -110,7 +122,8 @@ are needed to remove this diagnostic. The earlier sanitized publish logger is in
 ## Offline verification
 
 `npm run test:voice-cleanup` includes owner authorization, expiry/scope rejection, replay IDs,
-fixed scheduling, sanitized 400/429 output, and actual QStash signature verification with
+fixed scheduling, the `[A-Za-z0-9_-]{1,100}` ID format across every mocked publish,
+pre-publish rejection of unexpected characters, sanitized 400/429 output, and actual QStash signature verification with
 synthetic current/rotated keys. It verifies the reserved callback never delegates to session
 cleanup and normal session IDs still do. All fetches are mocked and Redis/LiveKit calls are
 guarded. The terminal runner is tested against a mocked endpoint; no production probe runs.

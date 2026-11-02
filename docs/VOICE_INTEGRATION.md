@@ -116,7 +116,7 @@ without starting a voice session. It is disabled by default and requires an expl
 The current lockfile and installed SDK are `@upstash/qstash` 2.12.1. Offline tests against
 that SDK confirm that initial cleanup publishes to
 `https://qstash.upstash.io/v2/publish/https://<callback-host>/api/voice/cleanup`, with
-`Upstash-Delay: 75s`, `Upstash-Retries: 3`, and `Upstash-Deduplication-Id: <sessionId>:initial`
+`Upstash-Delay: 75s`, `Upstash-Retries: 3`, and `Upstash-Deduplication-Id: <sessionId>-initial`
 (32 characters for the generated 24-character session ID). The SDK appends the destination
 directly; do not pre-encode it. It serializes `{ sessionId }` once and sets JSON content type.
 It shortens destination paths in its own log output, so an abbreviated log URL is not proof
@@ -128,12 +128,14 @@ without logging their values. Verify them privately against the selected Upstash
 For a non-2xx response other than rate limiting, the SDK retains the HTTP status in
 `QstashError.status` and the raw service response in `.message`. Its transport retries
 apply to fetch/network exceptions, not HTTP 400 responses. The previous application log
-discarded status and reason. This prevented confirming the production rejection's cause.
-Commit `611f17e` already changed five delivery retries to three; an older deployment could
-still request five, but neither the deployment version nor an actual retry-limit rejection
-can be established from the supplied status-only log. The installed SDK's error name is
-`QstashError`, whereas the reported log spells it `QStashError`; check the production
-deployment's Git SHA and lockfile rather than assuming they match the local checkout.
+discarded status and reason. The owner subsequently confirmed the production cause with the
+protected probe: QStash returned HTTP 400 and `DeduplicationId cannot [redacted] ':'`.
+The former `<sessionId>:<tag>` separator was rejected. `cleanupDeduplicationId` now builds
+`<sessionId>-<tag>` IDs, requires non-empty `[A-Za-z0-9_-]+` components and retains the
+100-character bound. Unexpected characters fail locally rather than being normalized into
+colliding IDs. This builder covers initial cleanup, heartbeats, reconciliation, deletion
+retries, and the owner diagnostic, including redaction of its complete ID from errors.
+Existing ASCII-only diagnostics could not catch this restriction because a colon is ASCII.
 
 Current [publish documentation](https://upstash.com/docs/qstash/api-reference/messages/publish-a-message)
 specifies three delivery retries by default. The current
@@ -143,18 +145,19 @@ hour and a small JSON body. The ten-active-schedules limit concerns recurring sc
 this code publishes individual delayed messages. The pricing table does not specify a
 separate numeric retry maximum, so do not infer the account's maximum from its default.
 The documented quota/rate-limit rejection uses 429; message-size rejection uses 412.
-A bare 400 does not establish either problem. No paid-plan change is justified by this log.
+A bare 400 does not establish either problem. The protected probe identified the colon in
+the deduplication ID, so this fix does not change delay, retry count, quotas, or plan settings.
 [Deduplication](https://upstash.com/docs/qstash/features/deduplication) accepts duplicates
-with 202 within a ten-minute window. The published ID is passed unchanged (bounded to
-100 characters); these docs provide no evidence that its colon causes a rejection.
+with 202 within a ten-minute window. The SDK passes the ID unchanged; application code must
+generate a supported ID. Repeated scheduling of the same session/tag retains the same ID.
 
 After a future deployment containing these diagnostics, capture the single Vercel
 Production log entry `[voice-cleanup] QStash publish failed` and the deployment's Git SHA.
 The entry contains `httpStatus`, `serviceCode` (if provided), `serviceReason`, `delaySeconds`,
 `retries`, `deduplicationIdLength`, `deduplicationIdAscii`, `callbackProtocol`, `callbackPath`,
 `qstashUrlConfigured`, and `qstashRegionConfigured`. For the initial request, expect delay
-75, retries 3, ID length 32 and HTTPS at `/api/voice/cleanup`. This is the missing diagnostic
-needed to distinguish a destination rejection, plan restriction, or other service error.
+75, retries 3, ID length 32 and HTTPS at `/api/voice/cleanup`. Retain these diagnostics for
+the controlled validation described in the owner probe guide, then disable/remove the probe.
 
 Only top-level/nested service error code/reason fields are read. Diagnostics redact known
 environment secrets and session identifiers, remove URLs, allowlist service vocabulary and

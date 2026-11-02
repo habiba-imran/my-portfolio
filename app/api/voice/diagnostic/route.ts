@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scheduleVoiceCleanup } from "../../../../lib/voice-cleanup";
+import { cleanupDeduplicationId, scheduleVoiceCleanup } from "../../../../lib/voice-cleanup";
 import { qstashErrorDiagnostics } from "../../../../lib/qstash-diagnostics";
 import { authorizeOwnerDiagnostic, QSTASH_DIAGNOSTIC_SESSION_ID } from "../../../../lib/qstash-owner-auth";
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       serviceReason: null,
     }, { headers });
   } catch (error) {
-    const details = qstashErrorDiagnostics(error, [QSTASH_DIAGNOSTIC_SESSION_ID, `${QSTASH_DIAGNOSTIC_SESSION_ID}:${tag}`]);
+    const details = qstashErrorDiagnostics(error, [QSTASH_DIAGNOSTIC_SESSION_ID, cleanupDeduplicationId(QSTASH_DIAGNOSTIC_SESSION_ID, tag)]);
     return NextResponse.json({
       ok: false,
       published: false,
