@@ -119,7 +119,18 @@ export default function VoiceCallControls() {
         body: JSON.stringify({ turnstileToken }),
       });
       const details = await response.json();
-      if (!response.ok) throw new Error(details.error || "The voice session could not start.");
+      if (!response.ok) {
+        const stageMessages: Record<string, string> = {
+          configuration: "Voice setup is incomplete or invalid in Vercel Production settings.",
+          turnstile_verification: "Cloudflare could not verify the security check. Check the Turnstile hostname and network access.",
+          cleanup_reconciliation: "The voice cleanup service is unavailable. Check Upstash Redis and QStash.",
+          redis_reservation: "The voice session store is unavailable. Check the Upstash Redis connection.",
+          cleanup_schedule: "Delayed cleanup could not be scheduled. Check QStash settings and account limits.",
+          token_issuance: "LiveKit token creation failed. Check the LiveKit server credentials.",
+          agent_dispatch: "The existing LiveKit voice agent could not be reached.",
+        };
+        throw new Error(stageMessages[details.code] || details.error || "The voice session could not start.");
+      }
       const session: Session = { sessionId: details.sessionId, sessionKey: details.sessionKey };
       sessionRef.current = session;
       if (thisAttempt !== attempt.current) {

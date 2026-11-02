@@ -42,9 +42,8 @@ can start. Configure it before any microphone test:
 1. In Upstash, create or select a QStash account/workspace and copy its `QSTASH_TOKEN`,
    `QSTASH_CURRENT_SIGNING_KEY`, and `QSTASH_NEXT_SIGNING_KEY` into local `.env.local` and
    Vercel Production (and Preview only if preview voice use is intended).
-   Confirm the QStash plan accepts the five delivery retries requested by this app; otherwise
-   adjust `retries` in `lib/voice-cleanup.ts` to the plan's permitted maximum before enabling
-   sessions.
+   The app requests QStash's default three delivery retries, then persists and schedules
+   another reconciliation attempt when room deletion fails.
 2. Set `VOICE_CLEANUP_URL` in Vercel to the canonical production origin plus
    `/api/voice/cleanup`, for example `https://portfolio.example/api/voice/cleanup`. Do not
    point it at a preview deployment or redirecting URL.
@@ -95,8 +94,8 @@ microphone test should happen only after the configuration checklist above is co
 
 No separate terminal or local worker is needed for the deployed site. The session and cleanup
 handlers run as Vercel serverless routes. A 503 from `/api/voice/session` means admission
-failed closed. Check Vercel → Logs for `[voice-session] admission unavailable` and its
-`stage`; logs intentionally include no credentials or request contents. `configuration`
+  failed closed. The response and Vercel log include a safe `code`/`stage` (no credential
+  values or request contents). `configuration`
 means a required environment variable is missing or malformed; `turnstile_verification`
 means Siteverify could not complete; `cleanup_reconciliation` / `cleanup_schedule` points to
 QStash or Redis; `redis_reservation` points to Redis; `token_issuance` or `agent_dispatch`

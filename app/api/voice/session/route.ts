@@ -122,19 +122,31 @@ export async function POST(request: Request) {
         sessionKey,
         expiresAt: hardExpiry,
       }, { headers: { "Cache-Control": "no-store" } });
-    } catch {
-      console.error("[voice-session] provisioning failed", { stage });
+    } catch (error) {
+      console.error("[voice-session] provisioning failed", {
+        stage,
+        errorType: error instanceof Error ? error.name : "UnknownError",
+      });
       if (!cleanupScheduled) {
         await redis.eval<unknown[], number>(RELEASE_UNDISPATCHED, [ACTIVE_KEY, `portfolio:voice:session:${sessionId}`], [sessionId]);
       }
       // Dispatch may have succeeded even if its request timed out. Keep the lease
       // so scheduled cleanup can inspect and delete any room that was created.
-      return NextResponse.json({ error: "The voice agent could not be reached. Please try again." }, { status: 503 });
+      return NextResponse.json({
+        error: "The voice agent could not be reached. Please try again.",
+        code: stage,
+      }, { status: 503 });
     }
-  } catch {
+  } catch (error) {
     // Keep credentials and request data out of logs; the stage pinpoints which
     // Vercel setting or dependency to inspect when admission fails closed.
-    console.error("[voice-session] admission unavailable", { stage });
-    return NextResponse.json({ error: "Voice sessions are temporarily unavailable." }, { status: 503 });
+    console.error("[voice-session] admission unavailable", {
+      stage,
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json({
+      error: "Voice sessions are temporarily unavailable.",
+      code: stage,
+    }, { status: 503 });
   }
 }

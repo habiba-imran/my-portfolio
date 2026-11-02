@@ -40,7 +40,9 @@ export async function scheduleVoiceCleanup(sessionId: string, delaySeconds: numb
     url: cleanupCallbackUrl(),
     body: { sessionId },
     delay: Math.max(1, Math.floor(delaySeconds)),
-    retries: 5,
+    // QStash's default of three is available on its free tier. Persistent
+    // cleanup retries are scheduled by Redis state below, not by raising this.
+    retries: 3,
     deduplicationId: `${sessionId}:${dedupeTag}`.slice(0, 100),
   });
 }
