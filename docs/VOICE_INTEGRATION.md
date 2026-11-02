@@ -109,6 +109,10 @@ include environment values.
 
 ### Temporary QStash publish diagnostics
 
+If public admission quota is exhausted, use the separately protected, terminal-only
+[owner QStash probe](QSTASH_OWNER_DIAGNOSTIC.md). It publishes a signed no-op cleanup message
+without starting a voice session. It is disabled by default and requires an explicit deployment.
+
 The current lockfile and installed SDK are `@upstash/qstash` 2.12.1. Offline tests against
 that SDK confirm that initial cleanup publishes to
 `https://qstash.upstash.io/v2/publish/https://<callback-host>/api/voice/cleanup`, with

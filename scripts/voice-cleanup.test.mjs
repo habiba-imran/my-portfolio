@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { runInThisContext } from "node:vm";
+import { createHash } from "node:crypto";
 import { afterEach, beforeEach, mock, test } from "node:test";
 import ts from "typescript";
+import { diagnoseQstash } from "./diagnose-qstash.mjs";
 
 const require = createRequire(import.meta.url);
 const { QstashError, QstashDailyRatelimitError } = require("@upstash/qstash");
@@ -24,14 +26,28 @@ function loadTypeScript(relativePath, overrides = {}) {
 }
 
 const { qstashErrorDiagnostics } = loadTypeScript("../lib/qstash-diagnostics.ts");
+const ownerAuth = loadTypeScript("../lib/qstash-owner-auth.ts");
+const { ownerDiagnosticSignature, authorizeOwnerDiagnostic, QSTASH_DIAGNOSTIC_SESSION_ID, QSTASH_DIAGNOSTIC_PATH } = ownerAuth;
 const noProviderCalls = () => { throw new Error("Redis/LiveKit calls are forbidden in this test"); };
-const { scheduleVoiceCleanup, cleanupCallbackUrl } = loadTypeScript("../lib/voice-cleanup.ts", {
+const { scheduleVoiceCleanup, cleanupCallbackUrl, qstashReceiver } = loadTypeScript("../lib/voice-cleanup.ts", {
   "./voice-session": {
     ACTIVE_KEY: "unused",
     createRedis: noProviderCalls,
     createLiveKitApi: noProviderCalls,
   },
   "./qstash-diagnostics": { qstashErrorDiagnostics },
+});
+const { POST: publishProbe } = loadTypeScript("../app/api/voice/diagnostic/route.ts", {
+  "../../../../lib/voice-cleanup": { scheduleVoiceCleanup },
+  "../../../../lib/qstash-diagnostics": { qstashErrorDiagnostics },
+  "../../../../lib/qstash-owner-auth": ownerAuth,
+});
+const cleanupSession = mock.fn();
+const { POST: cleanupCallback } = loadTypeScript("../app/api/voice/cleanup/route.ts", {
+  "../../../../lib/voice-cleanup": {
+    cleanupCallbackUrl, qstashReceiver, cleanupExpiredVoiceSession: cleanupSession,
+  },
+  "../../../../lib/qstash-owner-auth": ownerAuth,
 });
 
 const sessionId = "abcdefghijklmnopqrstuvwx";
@@ -40,7 +56,8 @@ const testEnvironment = {
   QSTASH_TOKEN: "synthetic-publish-secret",
   QSTASH_CURRENT_SIGNING_KEY: "synthetic-current-secret",
   QSTASH_NEXT_SIGNING_KEY: "synthetic-next-secret",
-  VOICE_SESSION_HMAC_SECRET: "synthetic-hmac-secret",
+  VOICE_SESSION_HMAC_SECRET: "synthetic-hmac-secret-at-least-32-characters",
+  VOICE_QSTASH_DIAGNOSTIC_ENABLED: undefined,
   VOICE_CLEANUP_URL: callbackUrl,
   QSTASH_URL: undefined,
   QSTASH_REGION: undefined,
@@ -58,6 +75,8 @@ beforeEach(() => {
   mock.method(globalThis, "fetch", async () => { throw new Error("Unexpected external call"); });
   mock.method(console, "error", () => {});
   mock.method(console, "warn", () => {});
+  cleanupSession.mock.resetCalls();
+  cleanupSession.mock.mockImplementation(noProviderCalls);
 });
 
 afterEach(() => {
@@ -207,4 +226,166 @@ test("invalid callback configuration fails before publishing", async () => {
 
 test("unrelated errors do not expose their message or stack", () => {
   assert.deepEqual(qstashErrorDiagnostics(new Error("sensitive network error")), { httpStatus: null });
+});
+
+function ownerRequest({ origin = "https://portfolio.example", timestamp = String(Math.floor(Date.now() / 1000)), nonce = "a".repeat(32), secret = testEnvironment.VOICE_SESSION_HMAC_SECRET, headers = {}, ...options } = {}) {
+  return new Request(`${origin}${QSTASH_DIAGNOSTIC_PATH}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ownerDiagnosticSignature(origin, timestamp, nonce, secret)}`,
+      "X-Owner-Timestamp": timestamp,
+      "X-Owner-Nonce": nonce,
+      ...headers,
+    },
+    ...options,
+  });
+}
+
+test("owner diagnostic is disabled by default, then denies anonymous or forged authorization without publishing", async () => {
+  assert.equal((await publishProbe(ownerRequest())).status, 404);
+  process.env.VOICE_QSTASH_DIAGNOSTIC_ENABLED = "1";
+  for (const request of [
+    new Request(`https://portfolio.example${QSTASH_DIAGNOSTIC_PATH}`, { method: "POST" }),
+    ownerRequest({ secret: "wrong-owner-secret" }),
+    ownerRequest({ headers: { Authorization: "Bearer invalid" } }),
+    ownerRequest({ headers: { "X-Owner-Nonce": "not-a-nonce" } }),
+    ownerRequest({ headers: { Origin: "https://portfolio.example" } }),
+    ownerRequest({ headers: { "X-Owner-Timestamp": "NaN" } }),
+  ]) assert.equal((await publishProbe(request)).status, 404);
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
+test("owner authorization binds origin/path/method/time and fails closed without a strong configured secret", () => {
+  process.env.VOICE_QSTASH_DIAGNOSTIC_ENABLED = "1";
+  const now = 1800000000000;
+  const timestamp = String(Math.floor(now / 1000));
+  assert.match(authorizeOwnerDiagnostic(ownerRequest({ timestamp }), now), /^probe-/);
+  assert.equal(authorizeOwnerDiagnostic(ownerRequest({ timestamp }), now + 61000), null);
+  assert.equal(authorizeOwnerDiagnostic(ownerRequest({ timestamp }), now - 61000), null);
+  const signed = ownerRequest({ timestamp });
+  for (const [url, method] of [
+    [`https://other.example${QSTASH_DIAGNOSTIC_PATH}`, "POST"],
+    ["https://portfolio.example/api/voice/session", "POST"],
+    [`https://portfolio.example${QSTASH_DIAGNOSTIC_PATH}?delay=1`, "POST"],
+    [`https://portfolio.example${QSTASH_DIAGNOSTIC_PATH}`, "GET"],
+    [`http://portfolio.example${QSTASH_DIAGNOSTIC_PATH}`, "POST"],
+  ]) assert.equal(authorizeOwnerDiagnostic(new Request(url, { method, headers: signed.headers }), now), null);
+  for (const secret of ["", "short"]) {
+    process.env.VOICE_SESSION_HMAC_SECRET = secret;
+    assert.equal(authorizeOwnerDiagnostic(ownerRequest({ timestamp }), now), null);
+  }
+});
+
+test("authorized probe publishes exactly one reserved message with normal delay/retries and replay deduplication", async () => {
+  process.env.VOICE_QSTASH_DIAGNOSTIC_ENABLED = "1";
+  response('{"messageId":"offline-probe"}');
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  // A supplied body cannot change the fixed callback, session ID, or settings.
+  const request = ownerRequest({ timestamp, body: '{"sessionId":"real-session","url":"https://other.example","delay":0}' });
+  const result = await publishProbe(request);
+  assert.equal(result.status, 200);
+  assert.equal(result.headers.get("Cache-Control"), "no-store");
+  assert.deepEqual(await result.json(), {
+    ok: true, published: true, deduplicated: false,
+    httpStatus: null, serviceCode: null, serviceReason: null,
+  });
+  assert.equal(fetch.mock.callCount(), 1);
+  const [url, options] = fetch.mock.calls[0].arguments;
+  assert.equal(url, `https://qstash.upstash.io/v2/publish/${callbackUrl}`);
+  assert.equal(options.body, JSON.stringify({ sessionId: QSTASH_DIAGNOSTIC_SESSION_ID }));
+  assert.equal(options.headers.get("Upstash-Delay"), "75s");
+  assert.equal(options.headers.get("Upstash-Retries"), "3");
+  const dedupe = options.headers.get("Upstash-Deduplication-Id");
+  assert.equal(dedupe, `${QSTASH_DIAGNOSTIC_SESSION_ID}:probe-${timestamp}-${"a".repeat(32)}`);
+  assert.ok(dedupe.length <= 100);
+  response('{"messageId":"offline-probe","deduplicated":true}', 202);
+  const replay = await publishProbe(ownerRequest({ timestamp }));
+  assert.equal((await replay.json()).deduplicated, true);
+  assert.equal(fetch.mock.calls[1].arguments[1].headers.get("Upstash-Deduplication-Id"), dedupe);
+  assert.equal(cleanupSession.mock.callCount(), 0);
+});
+
+test("owner probe returns only sanitized QStash rejection fields, including actual 400/429 status", async () => {
+  process.env.VOICE_QSTASH_DIAGNOSTIC_ENABLED = "1";
+  response(JSON.stringify({ code: "INVALID_REQUEST", error: `Invalid destination ${callbackUrl} ${testEnvironment.QSTASH_TOKEN}`, payload: "private-payload" }), 400);
+  const result = await publishProbe(ownerRequest());
+  assert.equal(result.status, 502);
+  assert.equal(result.headers.get("Cache-Control"), "no-store");
+  const body = await result.json();
+  assert.equal(body.httpStatus, 400);
+  assert.equal(body.serviceCode, "INVALID_REQUEST");
+  assert.equal(body.ok, false);
+  assert.match(body.serviceReason, /^Invalid destination/);
+  const serialized = JSON.stringify(body);
+  for (const value of [testEnvironment.QSTASH_TOKEN, testEnvironment.VOICE_SESSION_HMAC_SECRET, callbackUrl, "private-payload"]) assert.ok(!serialized.includes(value));
+  assert.equal(fetch.mock.callCount(), 1);
+  response('{"error":"Rate limit exceeded"}', 429);
+  assert.equal((await (await publishProbe(ownerRequest())).json()).httpStatus, 429);
+  assert.equal(fetch.mock.callCount(), 2);
+});
+
+async function signedCleanupRequest(payload, { key = testEnvironment.QSTASH_CURRENT_SIGNING_KEY, destination = callbackUrl, signedBody } = {}) {
+  const { SignJWT } = await import("jose");
+  const body = JSON.stringify(payload);
+  const signature = await new SignJWT({ body: createHash("sha256").update(signedBody ?? body).digest("base64url") })
+    .setProtectedHeader({ alg: "HS256" }).setIssuer("Upstash").setSubject(destination)
+    .setIssuedAt().setNotBefore("0s").setExpirationTime("1m")
+    .sign(new TextEncoder().encode(key));
+  return new Request(callbackUrl, {
+    method: "POST", headers: { "Content-Type": "application/json", "Upstash-Signature": signature }, body,
+  });
+}
+
+test("signed reserved cleanup is a true no-op before Redis or LiveKit; current and rotated keys work", async () => {
+  assert.equal(QSTASH_DIAGNOSTIC_SESSION_ID.length, 25);
+  assert.notEqual(QSTASH_DIAGNOSTIC_SESSION_ID.length, sessionId.length);
+  for (const key of [testEnvironment.QSTASH_CURRENT_SIGNING_KEY, testEnvironment.QSTASH_NEXT_SIGNING_KEY]) {
+    const result = await cleanupCallback(await signedCleanupRequest({ sessionId: QSTASH_DIAGNOSTIC_SESSION_ID }, { key }));
+    assert.equal(result.status, 200);
+    assert.deepEqual(await result.json(), { cleaned: true, diagnostic: true });
+  }
+  assert.equal(cleanupSession.mock.callCount(), 0);
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
+test("reserved cleanup cannot bypass QStash signatures, audience, body hash or normal payload validation", async () => {
+  const payload = { sessionId: QSTASH_DIAGNOSTIC_SESSION_ID };
+  const unsigned = new Request(callbackUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  assert.equal((await cleanupCallback(unsigned)).status, 401);
+  for (const options of [
+    { key: "wrong-key" }, { destination: "https://other.example/api/voice/cleanup" }, { signedBody: "tampered" },
+  ]) assert.notEqual((await cleanupCallback(await signedCleanupRequest(payload, options))).status, 200);
+  assert.equal((await cleanupCallback(await signedCleanupRequest({ sessionId: "bad" }))).status, 400);
+  assert.equal(cleanupSession.mock.callCount(), 0);
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
+test("real-session cleanup still delegates unchanged after QStash verification", async () => {
+  cleanupSession.mock.mockImplementation(async () => ({ cleaned: true }));
+  const result = await cleanupCallback(await signedCleanupRequest({ sessionId }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(cleanupSession.mock.calls[0].arguments, [sessionId]);
+});
+
+test("terminal runner interoperates with owner auth using a scoped signature, not a raw credential", async () => {
+  process.env.VOICE_QSTASH_DIAGNOSTIC_ENABLED = "1";
+  const capture = mock.fn(async (url, options) => {
+    assert.equal(options.redirect, "error");
+    assert.ok(!JSON.stringify(options).includes(testEnvironment.VOICE_SESSION_HMAC_SECRET));
+    assert.ok(authorizeOwnerDiagnostic(new Request(url, options)));
+    return new Response('{"ok":false,"published":false,"httpStatus":400,"serviceCode":"INVALID_REQUEST","serviceReason":"Invalid delay","ignored":"secret"}', { status: 502 });
+  });
+  const result = await diagnoseQstash("https://portfolio.example", { env: testEnvironment, fetchImpl: capture });
+  assert.equal(capture.mock.callCount(), 1);
+  assert.deepEqual(result, { endpointHttpStatus: 502, ok: false, published: false, deduplicated: false, httpStatus: 400, serviceCode: "INVALID_REQUEST", serviceReason: "Invalid delay" });
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
+test("terminal runner fails before any request for missing authorization or unsafe origins", async () => {
+  const guard = mock.fn(noProviderCalls);
+  for (const origin of ["http://portfolio.example", "https://user:pass@portfolio.example", "https://portfolio.example/other", "https://portfolio.example?token=value"]) {
+    await assert.rejects(diagnoseQstash(origin, { env: testEnvironment, fetchImpl: guard }));
+  }
+  await assert.rejects(diagnoseQstash("https://portfolio.example", { env: {}, fetchImpl: guard }));
+  assert.equal(guard.mock.callCount(), 0);
 });

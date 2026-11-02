@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:voice-cleanup": "node --test scripts/voice-cleanup.test.mjs",
+    "diagnose:qstash": "node scripts/diagnose-qstash.mjs",
     "test:browser": "node scripts/verify-browser.mjs"
   },
   "dependencies": {

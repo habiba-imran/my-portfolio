@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cleanupCallbackUrl, cleanupExpiredVoiceSession, qstashReceiver } from "../../../../lib/voice-cleanup";
+import { QSTASH_DIAGNOSTIC_SESSION_ID } from "../../../../lib/qstash-owner-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,11 @@ export async function POST(request: Request) {
     if (!payload || typeof payload !== "object" || !("sessionId" in payload) ||
         typeof payload.sessionId !== "string" || !/^[A-Za-z0-9_-]{20,80}$/.test(payload.sessionId)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+    // Temporary probe: acknowledge only after the normal QStash signature and
+    // payload checks, before any Redis access or LiveKit room operation.
+    if (payload.sessionId === QSTASH_DIAGNOSTIC_SESSION_ID) {
+      return NextResponse.json({ cleaned: true, diagnostic: true }, { headers: { "Cache-Control": "no-store" } });
     }
     const result = await cleanupExpiredVoiceSession(payload.sessionId);
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
