@@ -121,7 +121,10 @@ export default function VoiceCallControls() {
       const details = await response.json();
       if (!response.ok) {
         const stageMessages: Record<string, string> = {
-          configuration: "Voice setup is incomplete or invalid in Vercel Production settings.",
+          configuration: "Voice setup is incomplete in Vercel Production settings.",
+          missing_environment: `Missing or blank Vercel variable(s): ${(details.variables as string[] | undefined)?.join(", ") || "check the voice configuration"}.`,
+          session_secret_too_short: "VOICE_SESSION_HMAC_SECRET must be at least 32 characters.",
+          cleanup_url_invalid: "VOICE_CLEANUP_URL must use HTTPS and end exactly in /api/voice/cleanup.",
           turnstile_verification: "Cloudflare could not verify the security check. Check the Turnstile hostname and network access.",
           cleanup_reconciliation: "The voice cleanup service is unavailable. Check Upstash Redis and QStash.",
           redis_reservation: "The voice session store is unavailable. Check the Upstash Redis connection.",

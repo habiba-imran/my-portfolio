@@ -102,6 +102,11 @@ QStash or Redis; `redis_reservation` points to Redis; `token_issuance` or `agent
 points to LiveKit. Confirm Vercel Production has all variables in the table above, including
 the four QStash settings, then redeploy after changing them.
 
+The response may also report `missing_environment` with names of unset variables,
+`session_secret_too_short` for an HMAC secret under 32 characters, or `cleanup_url_invalid`
+when `VOICE_CLEANUP_URL` is not HTTPS at the exact cleanup path. These diagnostics never
+include environment values.
+
 If Turnstile remains on “Verifying”, use the displayed Turnstile error code and confirm the
 site key authorizes the deployed hostname in Cloudflare. Retry after checking extensions,
 VPN/proxy, browser clock, and network access to `challenges.cloudflare.com`. The console's

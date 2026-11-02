@@ -6,7 +6,17 @@ export const SESSION_SECONDS = 5 * 60;
 const ACTIVE_KEY = "portfolio:voice:active";
 const QUOTA_SECONDS = 26 * 60 * 60;
 
-export class VoiceConfigError extends Error {}
+export type VoiceConfigIssue = "missing_environment" | "session_secret_too_short" | "cleanup_url_invalid";
+
+export class VoiceConfigError extends Error {
+  constructor(
+    readonly issue: VoiceConfigIssue,
+    readonly variables: string[] = [],
+  ) {
+    super("Voice service is not configured.");
+    this.name = "VoiceConfigError";
+  }
+}
 
 export function getVoiceConfig() {
   const names = [
@@ -25,16 +35,16 @@ export function getVoiceConfig() {
     "QSTASH_NEXT_SIGNING_KEY",
   ];
   const missing = names.filter((name) => !process.env[name]?.trim());
-  if (missing.length) throw new VoiceConfigError("Voice service is not configured.");
+  if (missing.length) throw new VoiceConfigError("missing_environment", missing);
   const hmacSecret = process.env.VOICE_SESSION_HMAC_SECRET!.trim();
-  if (hmacSecret.length < 32) throw new VoiceConfigError("Voice service is not configured.");
+  if (hmacSecret.length < 32) throw new VoiceConfigError("session_secret_too_short", ["VOICE_SESSION_HMAC_SECRET"]);
   try {
     const cleanupUrl = new URL(process.env.VOICE_CLEANUP_URL!.trim());
     if (cleanupUrl.protocol !== "https:" || cleanupUrl.pathname !== "/api/voice/cleanup" || cleanupUrl.search || cleanupUrl.hash) {
       throw new Error("invalid cleanup url");
     }
   } catch {
-    throw new VoiceConfigError("Voice service is not configured.");
+    throw new VoiceConfigError("cleanup_url_invalid", ["VOICE_CLEANUP_URL"]);
   }
   return {
     url: process.env.LIVEKIT_URL!.trim(),
@@ -52,7 +62,10 @@ export function getVoiceConfig() {
 export function createRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
   const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-  if (!url || !token) throw new VoiceConfigError("Voice service is not configured.");
+  if (!url || !token) throw new VoiceConfigError("missing_environment", [
+    ...(!url ? ["UPSTASH_REDIS_REST_URL"] : []),
+    ...(!token ? ["UPSTASH_REDIS_REST_TOKEN"] : []),
+  ]);
   return new Redis({ url, token });
 }
 
@@ -148,7 +161,11 @@ export function createLiveKitApi() {
   const host = process.env.LIVEKIT_URL?.trim();
   const apiKey = process.env.LIVEKIT_API_KEY?.trim();
   const secret = process.env.LIVEKIT_API_SECRET?.trim();
-  if (!host || !apiKey || !secret) throw new VoiceConfigError("Voice service is not configured.");
+  if (!host || !apiKey || !secret) throw new VoiceConfigError("missing_environment", [
+    ...(!host ? ["LIVEKIT_URL"] : []),
+    ...(!apiKey ? ["LIVEKIT_API_KEY"] : []),
+    ...(!secret ? ["LIVEKIT_API_SECRET"] : []),
+  ]);
   return new LiveKitAPI({
     host: host.replace(/^wss:/, "https:").replace(/^ws:/, "http:"),
     apiKey,

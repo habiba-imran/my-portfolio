@@ -12,6 +12,7 @@ import {
   newId,
   QUOTA_SECONDS,
   SESSION_SECONDS,
+  VoiceConfigError,
   verifyTurnstile,
   readJson,
 } from "../../../../lib/voice-session";
@@ -140,13 +141,17 @@ export async function POST(request: Request) {
   } catch (error) {
     // Keep credentials and request data out of logs; the stage pinpoints which
     // Vercel setting or dependency to inspect when admission fails closed.
+    const configError = error instanceof VoiceConfigError ? error : null;
     console.error("[voice-session] admission unavailable", {
       stage,
       errorType: error instanceof Error ? error.name : "UnknownError",
+      configIssue: configError?.issue,
+      variables: configError?.variables,
     });
     return NextResponse.json({
       error: "Voice sessions are temporarily unavailable.",
-      code: stage,
+      code: configError?.issue ?? stage,
+      ...(configError?.variables.length ? { variables: configError.variables } : {}),
     }, { status: 503 });
   }
 }
