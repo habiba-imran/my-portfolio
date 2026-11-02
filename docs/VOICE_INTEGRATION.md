@@ -107,6 +107,66 @@ The response may also report `missing_environment` with names of unset variables
 when `VOICE_CLEANUP_URL` is not HTTPS at the exact cleanup path. These diagnostics never
 include environment values.
 
+### Temporary QStash publish diagnostics
+
+The current lockfile and installed SDK are `@upstash/qstash` 2.12.1. Offline tests against
+that SDK confirm that initial cleanup publishes to
+`https://qstash.upstash.io/v2/publish/https://<callback-host>/api/voice/cleanup`, with
+`Upstash-Delay: 75s`, `Upstash-Retries: 3`, and `Upstash-Deduplication-Id: <sessionId>:initial`
+(32 characters for the generated 24-character session ID). The SDK appends the destination
+directly; do not pre-encode it. It serializes `{ sessionId }` once and sets JSON content type.
+It shortens destination paths in its own log output, so an abbreviated log URL is not proof
+of an empty or malformed destination. `QSTASH_URL`, `QSTASH_REGION`, regional credentials,
+and `QSTASH_DEV` can affect the SDK's effective endpoint/credentials; they are not set by
+this function. The next production diagnostic indicates whether URL/region overrides exist,
+without logging their values. Verify them privately against the selected Upstash region.
+
+For a non-2xx response other than rate limiting, the SDK retains the HTTP status in
+`QstashError.status` and the raw service response in `.message`. Its transport retries
+apply to fetch/network exceptions, not HTTP 400 responses. The previous application log
+discarded status and reason. This prevented confirming the production rejection's cause.
+Commit `611f17e` already changed five delivery retries to three; an older deployment could
+still request five, but neither the deployment version nor an actual retry-limit rejection
+can be established from the supplied status-only log. The installed SDK's error name is
+`QstashError`, whereas the reported log spells it `QStashError`; check the production
+deployment's Git SHA and lockfile rather than assuming they match the local checkout.
+
+Current [publish documentation](https://upstash.com/docs/qstash/api-reference/messages/publish-a-message)
+specifies three delivery retries by default. The current
+[free-plan limits](https://upstash.com/pricing/qstash) include 1,000 messages/day, a 1 MB
+message limit and a seven-day maximum delay. Cleanup uses delays from one second to one
+hour and a small JSON body. The ten-active-schedules limit concerns recurring schedules;
+this code publishes individual delayed messages. The pricing table does not specify a
+separate numeric retry maximum, so do not infer the account's maximum from its default.
+The documented quota/rate-limit rejection uses 429; message-size rejection uses 412.
+A bare 400 does not establish either problem. No paid-plan change is justified by this log.
+[Deduplication](https://upstash.com/docs/qstash/features/deduplication) accepts duplicates
+with 202 within a ten-minute window. The published ID is passed unchanged (bounded to
+100 characters); these docs provide no evidence that its colon causes a rejection.
+
+After a future deployment containing these diagnostics, capture the single Vercel
+Production log entry `[voice-cleanup] QStash publish failed` and the deployment's Git SHA.
+The entry contains `httpStatus`, `serviceCode` (if provided), `serviceReason`, `delaySeconds`,
+`retries`, `deduplicationIdLength`, `deduplicationIdAscii`, `callbackProtocol`, `callbackPath`,
+`qstashUrlConfigured`, and `qstashRegionConfigured`. For the initial request, expect delay
+75, retries 3, ID length 32 and HTTPS at `/api/voice/cleanup`. This is the missing diagnostic
+needed to distinguish a destination rejection, plan restriction, or other service error.
+
+Only top-level/nested service error code/reason fields are read. Diagnostics redact known
+environment secrets and session identifiers, remove URLs, allowlist service vocabulary and
+small numeric limits, collapse line breaks, and bound each text field to 300 characters.
+Unknown words/codes become `[redacted]`; absent code/reason fields are omitted. If the
+reason is fully redacted, inspect the corresponding error privately in Upstash rather than
+enabling raw response logging. Do not share raw `.message`, error objects, headers, tokens,
+signing keys, or payloads. Remove the temporary logging block and its helper after diagnosis.
+Failures still propagate to admission/heartbeat/callback handlers; no cleanup, signature
+verification, reservation, or rate-limit behavior has been disabled.
+
+Run `npm run test:voice-cleanup` for offline regression checks. The suite transpiles the
+production TypeScript in memory, uses the actual installed SDK and mocks every fetch;
+Redis/LiveKit clients are replaced with guards that throw if called. It does not load local
+environment files or contact any provider. Local tests cannot confirm live service acceptance.
+
 If Turnstile remains on “Verifying”, use the displayed Turnstile error code and confirm the
 site key authorizes the deployed hostname in Cloudflare. Retry after checking extensions,
 VPN/proxy, browser clock, and network access to `challenges.cloudflare.com`. The console's

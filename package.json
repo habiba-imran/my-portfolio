@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:voice-cleanup": "node --test scripts/voice-cleanup.test.mjs",
     "test:browser": "node scripts/verify-browser.mjs"
   },
   "dependencies": {

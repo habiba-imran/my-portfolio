@@ -1,5 +1,6 @@
 import { Client, Receiver } from "@upstash/qstash";
 import { ACTIVE_KEY, createLiveKitApi, createRedis } from "./voice-session";
+import { qstashErrorDiagnostics } from "./qstash-diagnostics";
 
 const cleanupPath = "/api/voice/cleanup";
 const RELEASE = `
@@ -36,7 +37,7 @@ export function qstashReceiver() {
 
 export async function scheduleVoiceCleanup(sessionId: string, delaySeconds: number, dedupeTag: string) {
   const client = new Client({ token: required("QSTASH_TOKEN") });
-  return client.publishJSON({
+  const request = {
     url: cleanupCallbackUrl(),
     body: { sessionId },
     delay: Math.max(1, Math.floor(delaySeconds)),
@@ -44,7 +45,25 @@ export async function scheduleVoiceCleanup(sessionId: string, delaySeconds: numb
     // cleanup retries are scheduled by Redis state below, not by raising this.
     retries: 3,
     deduplicationId: `${sessionId}:${dedupeTag}`.slice(0, 100),
-  });
+  };
+  try {
+    return await client.publishJSON(request);
+  } catch (error) {
+    // Temporary, bounded diagnostics for the publish rejection. Keep the original
+    // error/fail-closed behavior and omit the session ID, URL host and payload.
+    console.error("[voice-cleanup] QStash publish failed", {
+      ...qstashErrorDiagnostics(error, [sessionId, request.deduplicationId]),
+      delaySeconds: request.delay,
+      retries: request.retries,
+      deduplicationIdLength: request.deduplicationId.length,
+      deduplicationIdAscii: /^[\x21-\x7e]+$/.test(request.deduplicationId),
+      callbackProtocol: new URL(request.url).protocol,
+      callbackPath: cleanupPath,
+      qstashUrlConfigured: Boolean(process.env.QSTASH_URL),
+      qstashRegionConfigured: Boolean(process.env.QSTASH_REGION),
+    });
+    throw error;
+  }
 }
 
 export async function scheduleExpiredVoiceReconciliation() {
