@@ -57,10 +57,11 @@ export default function VoiceDemo() {
           </h2>
           <p>
             I’m especially interested in what happens when an interface becomes
-            a conversation. Here’s a look inside a real-time voice AI pipeline.
+            a conversation. My LiveKit voice agent lives in the “hi” panel
+            above. Here’s a look inside the pipeline that powers it.
           </p>
-          <a className="text-link" href="#projects">
-            Explore my voice AI work{" "}
+          <a className="text-link" href="#home">
+            Back to the voice agent{" "}
             <ArrowUpRight size={17} aria-hidden="true" />
           </a>
         </div>
@@ -70,7 +71,7 @@ export default function VoiceDemo() {
               <AudioLines size={17} aria-hidden="true" />
               Inside the conversation
             </span>
-            <span>Architecture explorer</span>
+            <span>LiveKit · STT · LLM · TTS</span>
           </div>
           <div
             className={`voice-rings voice-rings--${stage}`}

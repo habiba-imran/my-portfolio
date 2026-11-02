@@ -585,6 +585,153 @@ h1 {
   margin-top: 9px;
   letter-spacing: -0.04em;
 }
+.hero-art--voice {
+  aspect-ratio: 1;
+}
+.hero-art--voice .art-composition {
+  inset: 8% 2% 62%;
+  overflow: hidden;
+}
+.hero-art--voice .art-disc {
+  width: clamp(115px, 16vw, 160px);
+  left: calc(50% - clamp(57px, 8vw, 80px));
+  top: -13%;
+}
+.hero-art--voice .sound-sculpture {
+  width: 112%;
+  height: 190%;
+  top: -38%;
+  left: -6%;
+}
+.hero-art--voice .art-hi {
+  font-size: clamp(76px, 10vw, 138px);
+  left: 35%;
+  top: 0;
+}
+.hero-art--voice .art-star {
+  font-size: clamp(42px, 5vw, 66px);
+  right: 9%;
+  bottom: -17%;
+}
+.art-bottomline--voice {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 9px;
+}
+.art-bottomline--voice .art-live-copy p {
+  font-size: 15px;
+  margin-top: 4px;
+}
+.voice-call {
+  width: 100%;
+  position: relative;
+  z-index: 3;
+  color: #282b22;
+}
+.voice-call-status {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.015em;
+}
+.voice-call-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #878a7b;
+  flex: 0 0 auto;
+}
+.voice-call--connecting .voice-call-indicator,
+.voice-call--listening .voice-call-indicator,
+.voice-call--speaking .voice-call-indicator {
+  background: #57815b;
+  box-shadow: 0 0 0 3px rgb(87 129 91 / 16%);
+}
+.voice-call--connecting .voice-call-indicator {
+  animation: voice-pulse 1s ease-in-out infinite alternate;
+}
+.voice-call--error .voice-call-indicator {
+  background: #a64532;
+}
+.voice-challenge-wrap {
+  min-height: 62px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.voice-challenge-wrap > div {
+  transform: scale(0.86);
+  transform-origin: left center;
+}
+.voice-security-unavailable {
+  color: #713d27;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.voice-call-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.voice-call-actions button {
+  min-height: 42px;
+  border-radius: 999px;
+  padding: 0 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+.voice-call-actions button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.voice-call-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+.voice-call-retry {
+  margin-top: 7px;
+  color: #713d27;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 9px;
+}
+.voice-call-start {
+  background: #282d22;
+  color: #f3f2e9;
+}
+.voice-call-start:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+.voice-call-control {
+  background: #d5d3c8;
+  color: #282d22;
+}
+.voice-call-end {
+  color: #fffaf4;
+  background: #87431e;
+}
+.voice-call-note,
+.voice-call-error {
+  font-size: 9px;
+  line-height: 1.5;
+  margin-top: 6px;
+  max-width: 360px;
+}
+.voice-call-note {
+  color: #57594f;
+}
+.voice-call-error {
+  color: #8c3023;
+}
+@keyframes voice-pulse {
+  to { opacity: 0.45; }
+}
 .art-switch {
   display: flex;
   gap: 3px;
@@ -1975,6 +2122,17 @@ h1 {
   .hero-art {
     aspect-ratio: 1.2;
     padding: 24px;
+  }
+  .hero-art.hero-art--voice {
+    aspect-ratio: 1;
+  }
+  .hero-art--voice .art-topline > span,
+  .hero-art--voice .art-live-copy .art-label {
+    display: none;
+  }
+  .hero-art--voice .art-hi {
+    font-size: 68px;
+    top: 0;
   }
   .art-composition {
     inset: 7% 10% 18%;

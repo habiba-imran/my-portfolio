@@ -187,11 +187,8 @@ try {
   await waitFor(
     `document.readyState === 'complete' && document.querySelector('.hero-art')`,
   );
-  // A React state update proves hydration is ready before interaction checks.
-  await click('[aria-label="Show code artwork"]');
-  await waitFor(`document.querySelector('.hero-art--code')`);
-  await click('[aria-label="Show voice artwork"]');
-  await waitFor(`document.querySelector('.hero-art--voice')`);
+  // The former artwork toggle is now the live voice interface.
+  await waitFor(`document.querySelector('.voice-call') && document.querySelector('.voice-call-start')`);
   await evaluate(
     `document.fonts.ready.then(() => new Promise(resolve => setTimeout(resolve, 1500)))`,
   );
@@ -278,14 +275,14 @@ try {
       "project-preview",
     );
   }
-  await click(".expertise-row summary");
+  await click(".expertise-row .expertise-summary");
   assert.equal(
-    await evaluate(`document.querySelector('.expertise-row').open`),
+    await evaluate(`document.querySelector('.expertise-row .expertise-summary').getAttribute('aria-expanded') === 'true'`),
     true,
   );
-  await click(".expertise-row summary");
+  await click(".expertise-row .expertise-summary");
   assert.equal(
-    await evaluate(`document.querySelector('.expertise-row').open`),
+    await evaluate(`document.querySelector('.expertise-row .expertise-summary').getAttribute('aria-expanded') === 'true'`),
     false,
   );
   await click(".voice-stage-tabs button:nth-child(2)");
@@ -297,14 +294,19 @@ try {
     `document.querySelector('.voice-stage-detail h3').textContent === 'And, respond.'`,
   );
   assert.match(
-    await evaluate(`document.querySelector('.voice-section').textContent`),
-    /live demo coming soon/,
+    await evaluate(`document.querySelector('.hero-art').textContent`),
+    /VOICE AGENT \/ LIVEKIT/,
   );
   assert.equal(
     await evaluate(
-      `document.querySelectorAll('button').length > 0 && ![...document.querySelectorAll('button')].some(b => /start call|start demo/i.test(b.textContent))`,
+      `!!document.querySelector('.voice-call-start') && document.querySelector('.voice-call-start').disabled && !!document.querySelector('.voice-call-status')`,
     ),
     true,
+  );
+  assert.equal(
+    await evaluate(`fetch('/api/voice/session', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({turnstileToken:'missing-config-check'})}).then(response => response.status)`),
+    503,
+    "Voice admission fails closed when server protection and service settings are absent",
   );
 
   await send("Browser.grantPermissions", {
@@ -319,10 +321,11 @@ try {
     await evaluate(`navigator.clipboard.readText()`),
     "habibaimrannn@gmail.com",
   );
+  const wasDark = await evaluate(`document.documentElement.classList.contains('dark')`);
   await click(".theme-toggle");
-  await waitFor(`document.documentElement.classList.contains('dark')`);
+  await waitFor(`document.documentElement.classList.contains('dark') === ${!wasDark}`);
   await click(".theme-toggle");
-  await waitFor(`document.documentElement.classList.contains('light')`);
+  await waitFor(`document.documentElement.classList.contains('dark') === ${wasDark}`);
 
   const sizes = [360, 390, 430, 768, 1024, 1440, 1920];
   const layouts = [];
@@ -466,13 +469,13 @@ try {
         status: "passed",
         layouts,
         checks: [
-          "artwork",
+          "hero voice interface",
           "links and assets",
           "menu focus trap and restore",
           "case studies",
           "expertise",
           "voice explorer",
-          "honest demo status",
+          "voice API fail-closed status",
           "clipboard",
           "theme",
           "responsive layouts",

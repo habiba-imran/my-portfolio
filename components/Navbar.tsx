@@ -13,6 +13,7 @@ export default function Navbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { isMuted, toggleMute, playTick } = useSound();
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- avoid rendering client-only controls before hydration.
     setMounted(true);
     const observer = new IntersectionObserver(
       (entries) => {

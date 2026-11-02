@@ -4,7 +4,7 @@ import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { profile } from "@/lib/data";
 export default function Contact() {
   const [status, setStatus] = useState<"idle" | "copied" | "error">("idle");
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   async function copyEmail() {
     clearTimeout(timer.current);

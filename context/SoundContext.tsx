@@ -24,6 +24,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the saved preference once after mount.
       setIsMuted(sessionStorage.getItem("isMuted") !== "false");
     } catch {
       /* Storage can be unavailable. */
