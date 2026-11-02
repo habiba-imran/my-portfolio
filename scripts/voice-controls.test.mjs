@@ -42,7 +42,9 @@ class FakeRoom extends EventEmitter {
   connectCount = 0;
   startAudioCount = 0;
   disconnected = false;
+  attributeUpdates = [];
   localParticipant = {
+    setAttributes: async (attributes) => { this.attributeUpdates.push(attributes); },
     isMicrophoneEnabled: false, audioLevel: 0,
     setMicrophoneEnabled: async (enabled) => {
       if (permissionDenied) throw Object.assign(new Error("raw-permission-detail"), { name: "NotAllowedError" });
@@ -319,4 +321,73 @@ test("pure state mapping never labels an absent/disconnected agent as listening 
   assert.equal(ui.conversationPhase("connected", true, false, false), "muted");
   assert.equal(ui.conversationPhase("connected", true, true, false), "speaking");
   assert.ok(!ui.friendlyVoiceError("missing_environment", 503).includes("Vercel"));
+});
+
+test("playback acknowledgement waits for successful agent-track play and never repeats on reconnect", async () => {
+  let finishPlayback;
+  window.HTMLMediaElement.prototype.play.mock.mockImplementation(() => new Promise((resolve) => { finishPlayback = resolve; }));
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const room = rooms[0];
+  let agent;
+  const element = document.createElement("audio");
+  const track = { kind: Track.Kind.Audio, attach: () => element, detach: () => [element] };
+  await act(async () => { agent = addAgent(room); room.emit(RoomEvent.TrackSubscribed, track, {}, agent); });
+  assert.deepEqual(room.attributeUpdates, []);
+  await act(async () => { finishPlayback(); await flush(); });
+  assert.deepEqual(room.attributeUpdates, [{ "voiceagent.playback_ready": "true" }]);
+  await act(async () => {
+    room.state = "reconnecting"; room.emit(RoomEvent.ConnectionStateChanged);
+    room.state = "connected"; room.emit(RoomEvent.ConnectionStateChanged);
+    room.emit(RoomEvent.AudioPlaybackStatusChanged);
+    await flush();
+  });
+  assert.equal(room.attributeUpdates.length, 1);
+});
+
+test("blocked audio never acknowledges readiness; the playback recovery gesture acknowledges once", async () => {
+  playbackAllowed = false;
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const room = rooms[0];
+  const element = document.createElement("audio");
+  const track = { kind: Track.Kind.Audio, attach: () => element, detach: () => [element] };
+  await act(async () => { room.emit(RoomEvent.TrackSubscribed, track, {}, addAgent(room)); await flush(); });
+  assert.deepEqual(room.attributeUpdates, []);
+  playbackAllowed = true;
+  await click("Tap to hear the conversation");
+  assert.deepEqual(room.attributeUpdates, [{ "voiceagent.playback_ready": "true" }]);
+});
+
+test("a late playback resolution after ending never acknowledges a stale session", async () => {
+  let finishPlayback;
+  window.HTMLMediaElement.prototype.play.mock.mockImplementation(() => new Promise((resolve) => { finishPlayback = resolve; }));
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const room = rooms[0];
+  const element = document.createElement("audio");
+  await act(async () => {
+    room.emit(RoomEvent.TrackSubscribed, { kind: Track.Kind.Audio, attach: () => element, detach: () => [element] }, {}, addAgent(room));
+  });
+  await click("End call");
+  await act(async () => { finishPlayback(); await flush(); });
+  assert.equal(phase(), "ready");
+  assert.deepEqual(room.attributeUpdates, []);
+});
+
+test("worker departure and room disconnect share one authenticated release and restore Ready", async () => {
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const room = rooms[0];
+  let agent;
+  await act(async () => { agent = addAgent(room); });
+  await act(async () => {
+    room.emit(RoomEvent.ParticipantDisconnected, agent);
+    room.emit(RoomEvent.Disconnected);
+    await flush();
+  });
+  assert.equal(requests.filter(({ url }) => url === "/api/voice/session/end").length, 1);
+  assert.equal(room.disconnected, true);
+  assert.equal(phase(), "ready");
+  assert.equal(screen.getByRole("button", { name: "Talk to me" }).disabled, false);
 });

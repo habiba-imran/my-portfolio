@@ -1,0 +1,120 @@
+{
+  "reviewedAt": "2026-11-03",
+  "sources": ["public/Umm-e-Habiba-Imran-CV.pdf", "lib/data.ts"],
+  "person": {
+    "name": "Umm-e-Habiba Imran",
+    "knownAs": "Habiba Imran",
+    "biography": "Computer science student and software developer working on backend and full-stack applications, conversational AI, real-time voice pipelines, and applied AI projects.",
+    "interests": ["conversational AI", "backend and full-stack engineering", "real-time systems", "applied AI and algorithms"]
+  },
+  "education": {
+    "degree": "BS Computer Science",
+    "institution": "Bahria University",
+    "expectedGraduation": "December 2027",
+    "cgpa": "3.87"
+  },
+  "experience": [
+    {
+      "employer": "Finova Solutions",
+      "role": "Software developer, promoted from AI intern",
+      "period": "April 2026 onward, according to both sources",
+      "work": "Backend and frontend SaaS features for voice agents and call-quality evaluation; call-processing, input validation, reporting, provider configuration, organization API-key workflows and test calls; mentoring interns."
+    },
+    {
+      "employer": "Finova Solutions",
+      "role": "AI intern according to CV; intern according to portfolio",
+      "period": "2026; exact end month conflicts between sources",
+      "work": "Real-time telephony, STT, LLM and TTS pipelines; provider API integration and latency investigation."
+    },
+    {
+      "employer": "SPS-NASTP",
+      "role": "AI intern according to CV; intern according to portfolio",
+      "period": "2025; exact dates conflict between sources",
+      "work": "GreenKeyper chatbot and IBM watsonx integration."
+    }
+  ],
+  "skills": {
+    "languages": ["Python", "JavaScript", "TypeScript", "C++", "SQL"],
+    "backendAndWeb": ["FastAPI", "NestJS", "React", "REST APIs", "WebSockets"],
+    "databasesAndInfrastructure": ["PostgreSQL", "Supabase", "Firebase", "Docker"],
+    "voiceAndAI": ["LLM API integration", "STT", "TTS", "Deepgram", "ElevenLabs", "IBM watsonx", "LiveKit", "Twilio", "Telnyx"],
+    "appliedAIAndAlgorithmsFromPortfolio": ["TensorFlow", "Flask", "OpenCV", "NumPy", "Pandas", "SFML", "data structures and algorithms"],
+    "developmentTools": ["Git", "GitHub", "Claude Code", "OpenAI Codex"]
+  },
+  "projects": [
+    {
+      "name": "AwaazLabs",
+      "source": "portfolio",
+      "description": "Professional voice-agent and call-evaluation platform; portfolio groups voice and QualiCall work under this platform.",
+      "technologies": ["FastAPI", "NestJS", "LiveKit", "Twilio"],
+      "availability": "Professional/private work; no public source-code promise."
+    },
+    {
+      "name": "QualiCall",
+      "source": "CV",
+      "description": "Call-evaluation application with upload validation, processing status, reporting and frontend/backend report workflows.",
+      "technologies": ["Python", "FastAPI", "JavaScript", "SQL"]
+    },
+    {
+      "name": "Telephony SDK",
+      "source": "CV",
+      "description": "Internal reusable integration toolkit for telephony providers, calls and real-time events; described as developing in the CV.",
+      "technologies": ["Python", "Twilio", "Telnyx", "LiveKit"]
+    },
+    {
+      "name": "Awaaz Voice Agent",
+      "source": "CV",
+      "description": "Conversational voice pipeline integrating speech recognition, LLM responses, speech synthesis and telephony APIs.",
+      "technologies": ["Twilio", "LLM APIs", "STT", "TTS"]
+    },
+    {
+      "name": "AwaazLabs Self Serve",
+      "source": "CV",
+      "description": "Dashboards and backend configuration for provider selection, API keys and test-call workflows, helping nontechnical users configure agents.",
+      "technologies": ["JavaScript", "REST APIs"]
+    },
+    {
+      "name": "AIDRA",
+      "source": "CV and portfolio",
+      "description": "Adaptive Intelligence Disaster Response Agent: urban disaster-response simulation combining triage, routing, resource allocation, ML predictions and dynamic pathfinding.",
+      "technologies": ["React", "TypeScript", "AI/ML algorithms"]
+    },
+    {
+      "name": "EarthScan AI",
+      "source": "CV and portfolio",
+      "description": "Building-damage classification from paired pre/post-disaster xBD/xView2 satellite imagery. CNN and hybrid CNN+KNN models with Flask inference, confidence visualization and change heatmaps.",
+      "technologies": ["Python", "TensorFlow", "Flask", "OpenCV"]
+    },
+    {
+      "name": "VertexVoyage",
+      "source": "portfolio supplement",
+      "description": "Interactive desktop visualization of Dijkstra shortest-path routing on a Pakistan map, with graph data structures, multi-stop routes and real-time rendering.",
+      "technologies": ["C++", "SFML", "data structures and algorithms"]
+    }
+  ],
+  "achievements": [
+    "CodeQuest: second position, GDGOC x YOTA.",
+    "Merit scholarships: first in fifth semester, second in third semester, third in second semester.",
+    "Selected recipient of PM's Laptop Scheme 2025, Phase IV.",
+    "IBM watsonx Orchestrate Assistant Technical Sales Intermediate."
+  ],
+  "sourceConflicts": [
+    "Current Finova title: CV says Software Developer (promoted from AI Intern); portfolio says Full Stack Developer. Both start in April 2026.",
+    "Finova internship: CV says February–March 2026; portfolio says February–April 2026.",
+    "SPS-NASTP internship: CV says June–July 2025; portfolio says July–September 2025."
+  ],
+  "frequentlyAsked": {
+    "Who is Habiba?": "Introduce her background, BSCS at Bahria and software/voice-AI work in two or three natural sentences.",
+    "What are her skills?": "Select relevant grouped skills; distinguish voice/backend work from applied AI and algorithms.",
+    "What projects has she built?": "Mention two or three relevant verified projects; distinguish professional/private work from portfolio projects.",
+    "Tell me about her experience.": "Summarize Finova development/promotion and SPS-NASTP internship. Acknowledge source conflicts if exact titles or dates are requested.",
+    "Tell me more about that project.": "Use conversation history to resolve the previous project; ask which project only if ambiguous.",
+    "What's her favorite movie?": "That personal preference is not documented; say you do not have that detail."
+  },
+  "accuracyNotes": [
+    "No private phone number, address, identification details or credentials are included.",
+    "Do not invent preferences, availability, salaries, client identities or undocumented qualifications.",
+    "Do not turn CV-reported testing timings into a verified caller-heard latency guarantee; no numerical latency claim is included here.",
+    "The knowledge is a reviewed snapshot, not a live employment or availability feed."
+  ]
+}

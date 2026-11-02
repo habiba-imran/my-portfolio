@@ -303,7 +303,7 @@ test("origin and Siteverify rejection happen before reservation, cleanup schedul
 });
 
 test("real configuration validates default/global limits without weakening Siteverify hostname/action checks", async () => {
-  const { verifyTurnstile, getVoiceConfig, VoiceConfigError } = loadTypeScript("../lib/voice-session.ts", {
+  const { verifyTurnstile, getVoiceConfig, VoiceConfigError, issueLiveKitToken } = loadTypeScript("../lib/voice-session.ts", {
     "@upstash/redis": require("@upstash/redis"),
   });
   const names = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "TURNSTILE_SECRET_KEY", "NEXT_PUBLIC_TURNSTILE_SITE_KEY", "VOICE_SESSION_HMAC_SECRET", "VOICE_ALLOWED_ORIGINS", "VOICE_CLEANUP_URL", "QSTASH_TOKEN", "QSTASH_CURRENT_SIGNING_KEY", "QSTASH_NEXT_SIGNING_KEY", "VOICE_DAILY_BUDGET_SECONDS", "VOICE_MAX_CONCURRENT_SESSIONS"];
@@ -317,6 +317,14 @@ test("real configuration validates default/global limits without weakening Sitev
     delete process.env.VOICE_MAX_CONCURRENT_SESSIONS;
     assert.equal(getVoiceConfig().dailyBudgetSeconds, 3600);
     assert.equal(getVoiceConfig().maxConcurrentSessions, 5);
+    const token = await issueLiveKitToken("synthetic-room", "synthetic-visitor");
+    const claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    assert.deepEqual(claims.video, {
+      roomJoin: true, room: "synthetic-room", canPublishSources: ["microphone"],
+      canSubscribe: true, canPublishData: false, canUpdateOwnMetadata: true,
+    });
+    assert.equal(claims.sub, "synthetic-visitor");
+    assert.equal(claims.exp - claims.nbf, 300);
     for (const [name, value] of [["VOICE_DAILY_BUDGET_SECONDS", "-1"], ["VOICE_MAX_CONCURRENT_SESSIONS", "6"]]) {
       process.env[name] = value;
       assert.throws(() => getVoiceConfig(), VoiceConfigError);

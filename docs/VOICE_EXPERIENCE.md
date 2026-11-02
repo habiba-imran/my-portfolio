@@ -2,7 +2,10 @@
 
 The voice assistant remains inside the hero “hi” panel. Its UI, Turnstile execution and
 admission accounting changed; the existing LiveKit Cloud `voiceagent` dispatch and
-Deepgram/Groq/Cartesia worker are not copied, hosted or modified in this repository.
+Deepgram/Groq/Cartesia worker remains separately hosted. The public portfolio knowledge and
+configuration are prepared into an independent worker build context; see
+[the assistant profile guide](VOICE_ASSISTANT_PROFILE.md). Worker source changes remain
+generalized in its separate repository.
 
 ## Conversation and accessibility
 

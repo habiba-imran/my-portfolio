@@ -1,9 +1,11 @@
 # LiveKit voice demo operations
 
 The portfolio connects directly to the existing LiveKit Cloud worker and explicitly
-dispatches `voiceagent`. It does not copy, build, or deploy the Python worker and does not
-run its SQLite gateway in Vercel. The browser receives only a short-lived, room-scoped
-microphone token from the Next.js server.
+dispatches `voiceagent`. It does not run the Python worker or its SQLite gateway in Vercel.
+The browser receives only a short-lived, room-scoped microphone token from the Next.js server,
+including permission to update its own playback-readiness attribute. The separate worker's
+public profile/build-context preparation is documented in
+[the assistant profile guide](VOICE_ASSISTANT_PROFILE.md); preparation does not deploy it.
 
 ## Required configuration
 

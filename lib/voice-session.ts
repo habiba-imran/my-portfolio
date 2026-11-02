@@ -160,6 +160,8 @@ export async function issueLiveKitToken(roomName: string, identity: string) {
     canPublishSources: [TrackSource.MICROPHONE],
     canSubscribe: true,
     canPublishData: false,
+    // Own metadata only: acknowledge browser playback without room data/admin grants.
+    canUpdateOwnMetadata: true,
   });
   return token.toJwt();
 }

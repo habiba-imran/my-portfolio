@@ -42,6 +42,7 @@ export default function VoiceCallControls() {
   const deadline = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const meter = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const audioElements = useRef<HTMLMediaElement[]>([]);
+  const acknowledgePlayback = useRef<((elements: HTMLMediaElement[]) => void) | null>(null);
   const protectionConfigured = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
   const settleVerification = useCallback((token?: string) => {
@@ -104,6 +105,7 @@ export default function VoiceCallControls() {
     meter.current = undefined;
     for (const element of audioElements.current) element.remove();
     audioElements.current = [];
+    acknowledgePlayback.current = null;
     visual.current?.style.setProperty("--voice-level", "0");
     const room = roomRef.current;
     roomRef.current = null;
@@ -184,8 +186,29 @@ export default function VoiceCallControls() {
         if (!current()) return;
         setPhase("connecting");
         let connected = false;
+        let playbackAcknowledged = false;
+        let acknowledgingPlayback = false;
+        const playableElements = new Set<HTMLMediaElement>();
+        const acknowledge = () => {
+          if (!current() || !connected || room.state !== "connected" || !room.canPlaybackAudio ||
+              playableElements.size === 0 || playbackAcknowledged || acknowledgingPlayback) return;
+          acknowledgingPlayback = true;
+          void room.localParticipant.setAttributes({ "voiceagent.playback_ready": "true" })
+            .then(() => { playbackAcknowledged = true; })
+            .catch(() => {
+              if (current()) setError("The conversation couldn’t get ready. Please end this call and try again.");
+            })
+            .finally(() => { acknowledgingPlayback = false; });
+        };
+        acknowledgePlayback.current = (elements) => {
+          for (const element of elements) {
+            if (audioElements.current.includes(element)) playableElements.add(element);
+          }
+          acknowledge();
+        };
         const syncState = () => {
           if (!current() || !connected) return;
+          acknowledge();
           const agents = [...room.remoteParticipants.values()].filter((participant) => participant.kind === ParticipantKind.AGENT);
           setMuted(!room.localParticipant.isMicrophoneEnabled);
           setPhase(conversationPhase(room.state, agents.length > 0, agents.some((agent) => agent.isSpeaking), room.localParticipant.isMicrophoneEnabled));
@@ -196,11 +219,16 @@ export default function VoiceCallControls() {
           element.setAttribute("aria-hidden", "true");
           document.body.appendChild(element);
           audioElements.current.push(element);
-          void element.play().catch(() => { if (current()) setAudioBlocked(true); });
+          void element.play().then(() => {
+            if (!current() || !audioElements.current.includes(element)) return;
+            playableElements.add(element);
+            acknowledge();
+          }).catch(() => { if (current()) setAudioBlocked(true); });
           syncState();
         });
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
           for (const element of track.detach()) {
+            playableElements.delete(element);
             element.remove();
             audioElements.current = audioElements.current.filter((item) => item !== element);
           }
@@ -214,7 +242,9 @@ export default function VoiceCallControls() {
         room.on(RoomEvent.TrackMuted, syncState);
         room.on(RoomEvent.TrackUnmuted, syncState);
         room.on(RoomEvent.ConnectionStateChanged, syncState);
-        room.on(RoomEvent.AudioPlaybackStatusChanged, () => { if (current()) setAudioBlocked(!room.canPlaybackAudio); });
+        room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+          if (current()) { setAudioBlocked(!room.canPlaybackAudio); acknowledge(); }
+        });
         room.on(RoomEvent.Disconnected, () => { if (current() && !ending.current) void endCall(); });
         await room.connect(details.serverUrl, details.participantToken, { websocketTimeout: 15_000, peerConnectionTimeout: 15_000 });
         if (!current()) return;
@@ -286,8 +316,12 @@ export default function VoiceCallControls() {
     if (!room) return;
     try {
       await room.startAudio();
-      for (const element of audioElements.current) await element.play();
-      if (mounted.current && roomRef.current === room) setAudioBlocked(!room.canPlaybackAudio);
+      const elements = [...audioElements.current];
+      for (const element of elements) await element.play();
+      if (mounted.current && roomRef.current === room) {
+        setAudioBlocked(!room.canPlaybackAudio);
+        acknowledgePlayback.current?.(elements);
+      }
     } catch { if (mounted.current && roomRef.current === room) setError("Sound is still paused. Check your browser’s sound setting and try again."); }
   }
 
