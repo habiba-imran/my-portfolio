@@ -3,6 +3,8 @@ import { Onest } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { SoundProvider } from "@/context/SoundContext";
+import { VoiceSessionProvider } from "@/context/VoiceSessionContext";
+import FloatingVoiceControls from "@/components/FloatingVoiceControls";
 
 const onest = Onest({
   subsets: ["latin"],
@@ -45,7 +47,10 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <SoundProvider>{children}</SoundProvider>
+          <VoiceSessionProvider>
+            <SoundProvider>{children}</SoundProvider>
+            <FloatingVoiceControls />
+          </VoiceSessionProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -3,7 +3,7 @@ import { beforeEach, afterEach, after, mock, test } from "node:test";
 import { EventEmitter } from "node:events";
 import { createRequire } from "node:module";
 import { JSDOM } from "jsdom";
-import React, { useEffect } from "react";
+import React, { StrictMode, useEffect } from "react";
 import { loadTypeScript } from "./test-typescript.mjs";
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: "https://portfolio.example", pretendToBeVisual: true });
@@ -12,7 +12,7 @@ for (const [name, value] of Object.entries({ window: dom.window, document: dom.w
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 window.matchMedia = () => ({ matches: false });
-const { render, screen, fireEvent, waitFor, cleanup, act } = await import("@testing-library/react");
+const { render: renderComponent, screen, fireEvent, waitFor, cleanup, act } = await import("@testing-library/react");
 const require = createRequire(import.meta.url);
 const { RoomEvent, ParticipantKind, Track } = require("livekit-client");
 const ui = loadTypeScript("../lib/voice-ui.ts");
@@ -34,6 +34,9 @@ let playbackAllowed;
 let pendingMicrophone;
 let microphoneStopped;
 let previousKey;
+let timeouts;
+let intervals;
+let pendingConnect;
 
 class FakeRoom extends EventEmitter {
   state = "disconnected";
@@ -54,9 +57,9 @@ class FakeRoom extends EventEmitter {
       return { track: { stop: () => { microphoneStopped = true; this.localParticipant.isMicrophoneEnabled = false; } } };
     },
   };
-  constructor() { super(); if (unsupportedBrowser) throw new Error("raw-browser-detail"); rooms.push(this); }
+  constructor(options) { super(); if (unsupportedBrowser) throw new Error("raw-browser-detail"); this.options = options; rooms.push(this); }
   async startAudio() { this.startAudioCount++; this.canPlaybackAudio = playbackAllowed; }
-  async connect() { this.connectCount++; this.state = "connected"; this.emit(RoomEvent.ConnectionStateChanged); }
+  async connect() { this.connectCount++; if (pendingConnect) await pendingConnect; this.state = "connected"; this.emit(RoomEvent.ConnectionStateChanged); }
   async disconnect() { this.disconnected = true; this.localParticipant.isMicrophoneEnabled = false; this.state = "disconnected"; }
 }
 const turnstile = {
@@ -70,11 +73,22 @@ const Script = ({ onReady: ready, onError }) => {
   useEffect(() => { if (scriptReady) ready(); }, [ready]);
   return null;
 };
-const { default: VoiceCallControls } = loadTypeScript("../components/VoiceCallControls.tsx", {
+const voiceContext = loadTypeScript("../context/VoiceSessionContext.tsx", {
   "next/script": { __esModule: true, default: Script },
   "livekit-client": { Room: FakeRoom, RoomEvent, ParticipantKind, Track },
   "../lib/voice-ui": ui,
 });
+const controlOverrides = {
+  "../context/VoiceSessionContext": voiceContext,
+  "../lib/voice-ui": ui,
+  "next/link": { __esModule: true, default: ({ children, ...props }) => React.createElement("a", props, children) },
+};
+const { default: VoiceCallControls } = loadTypeScript("../components/VoiceCallControls.tsx", controlOverrides);
+const { default: FloatingVoiceControls } = loadTypeScript("../components/FloatingVoiceControls.tsx", controlOverrides);
+function TestProvider({ children }) {
+  return React.createElement(voiceContext.VoiceSessionProvider, null, children, React.createElement(FloatingVoiceControls));
+}
+function render(element, options = {}) { return renderComponent(element, { wrapper: TestProvider, ...options }); }
 const phase = () => document.querySelector(".voice-call").dataset.voicePhase;
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 async function click(label) { await act(async () => { fireEvent.click(screen.getByRole("button", { name: label })); await flush(); }); }
@@ -94,10 +108,18 @@ beforeEach(() => {
   expiredTokenFirst = false; sessionExpired = false; playbackAllowed = true;
   pendingMicrophone = null; microphoneStopped = false;
   heartbeatCallback = null; verificationOptions = null;
+  timeouts = new Map(); intervals = new Map();
+  pendingConnect = null;
   window.turnstile = turnstile;
   mock.method(window.HTMLMediaElement.prototype, "play", async () => { if (!playbackAllowed) throw new Error("synthetic-blocked-audio"); });
   const realInterval = globalThis.setInterval;
+  const realTimeout = globalThis.setTimeout;
+  mock.method(globalThis, "setTimeout", (callback, delay, ...args) => {
+    timeouts.set(delay, callback);
+    return realTimeout(callback, delay, ...args);
+  });
   mock.method(globalThis, "setInterval", (callback, delay, ...args) => {
+    intervals.set(delay, (intervals.get(delay) ?? 0) + 1);
     if (delay === 30_000) heartbeatCallback = callback;
     return realInterval(callback, delay, ...args);
   });
@@ -293,7 +315,8 @@ test("failed heartbeats and the hard session deadline both disconnect and releas
   fetch.mock.mockImplementation(async (url) => new Response('{}', { status: url.endsWith("heartbeat") ? 503 : 200 }));
   await act(async () => { await heartbeatCallback(); await flush(); });
   assert.equal(rooms[0].disconnected, true);
-  assert.equal(phase(), "ready");
+  assert.equal(phase(), "error");
+  assert.match(screen.getByRole("alert").textContent, /connection was interrupted/);
   cleanup();
   sessionExpired = true;
   fetch.mock.mockImplementation(async (url) => url === "/api/voice/session" ? sessionResponse() : new Response('{}'));
@@ -390,4 +413,243 @@ test("worker departure and room disconnect share one authenticated release and r
   assert.equal(room.disconnected, true);
   assert.equal(phase(), "ready");
   assert.equal(screen.getByRole("button", { name: "Talk to me" }).disabled, false);
+});
+
+test("shared layout preserves one conversation, playback acknowledgement and timers across page replacements", async () => {
+  const view = render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const room = rooms[0];
+  const element = document.createElement("audio");
+  await act(async () => {
+    room.emit(RoomEvent.TrackSubscribed, { kind: Track.Kind.Audio, attach: () => element, detach: () => [element] }, {}, addAgent(room));
+    await flush();
+  });
+  await click("Mute microphone");
+  const initialTimer = screen.getByLabelText("Remaining conversation time").textContent;
+  const listeners = room.eventNames().map(name => [name, room.listenerCount(name)]);
+  const timerCounts = new Map(intervals);
+  assert.equal(document.querySelector(".voice-floating"), null);
+  await act(async () => { view.rerender(React.createElement("main", null, "Projects page")); });
+  assert.ok(screen.getByRole("complementary", { name: "Ongoing voice conversation" }));
+  assert.equal(document.querySelector(".voice-floating").dataset.voicePhase, "muted");
+  assert.equal(screen.getByLabelText("Remaining conversation time").textContent, initialTimer.replace(" remaining", ""));
+  assert.equal(document.body.contains(element), true);
+  await click("Unmute microphone");
+  assert.equal(room.localParticipant.isMicrophoneEnabled, true);
+  await act(async () => { view.rerender(React.createElement(VoiceCallControls)); });
+  assert.equal(phase(), "listening");
+  assert.equal(document.querySelector(".voice-floating"), null);
+  assert.equal(screen.queryByRole("button", { name: "Talk to me" }), null);
+  assert.equal(rooms.length, 1);
+  assert.equal(room.connectCount, 1);
+  assert.equal(requests.filter(({ url }) => url === "/api/voice/session").length, 1);
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 0);
+  assert.deepEqual(room.attributeUpdates, [{ "voiceagent.playback_ready": "true" }]);
+  assert.deepEqual(room.eventNames().map(name => [name, room.listenerCount(name)]), listeners);
+  assert.deepEqual(intervals, timerCounts);
+  assert.equal(intervals.get(30_000), 1);
+  assert.equal(intervals.get(1_000), 1);
+  assert.equal(intervals.get(90), 1);
+  await click("Mute microphone");
+  assert.equal(room.localParticipant.isMicrophoneEnabled, false);
+  await act(async () => { view.rerender(React.createElement("main", null, "Privacy page")); });
+  await click("End call");
+  assert.equal(document.querySelector(".voice-floating"), null);
+  assert.equal(room.disconnected, true);
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 1);
+});
+
+test("floating controls appear only while the inline panel is out of view", async () => {
+  let observe;
+  class FakeObserver {
+    constructor(callback) { observe = callback; }
+    observe() {}
+    disconnect() {}
+  }
+  Object.defineProperty(globalThis, "IntersectionObserver", { configurable: true, value: FakeObserver });
+  try {
+    render(React.createElement(VoiceCallControls));
+    await click("Talk to me");
+    await act(async () => { observe([{ isIntersecting: false, intersectionRatio: 0 }]); });
+    assert.ok(document.querySelector(".voice-floating"));
+    await act(async () => { observe([{ isIntersecting: true, intersectionRatio: 1 }]); });
+    assert.equal(document.querySelector(".voice-floating"), null);
+  } finally { delete globalThis.IntersectionObserver; }
+});
+
+test("SDK recovery is bounded, retains mute and does not request another session", async () => {
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const room = rooms[0];
+  await act(async () => { addAgent(room); });
+  await click("Mute microphone");
+  await act(async () => { room.state = "reconnecting"; room.emit(RoomEvent.ConnectionStateChanged); });
+  const expireRecovery = timeouts.get(voiceContext.RECONNECT_GRACE_MS);
+  assert.equal(typeof expireRecovery, "function");
+  assert.equal(phase(), "reconnecting");
+  assert.equal(room.disconnected, false);
+  assert.equal(room.options.reconnectPolicy.nextRetryDelayInMs({ elapsedMs: 30_000, retryCount: 0 }), null);
+  assert.equal(room.options.reconnectPolicy.nextRetryDelayInMs({ elapsedMs: 10, retryCount: 4 }), null);
+  await act(async () => { room.state = "connected"; room.emit(RoomEvent.Reconnected); });
+  assert.equal(phase(), "muted");
+  assert.equal(room.localParticipant.isMicrophoneEnabled, false);
+  assert.equal(requests.filter(({ url }) => url === "/api/voice/session").length, 1);
+  await act(async () => { room.state = "reconnecting"; room.emit(RoomEvent.ConnectionStateChanged); });
+  await act(async () => { timeouts.get(voiceContext.RECONNECT_GRACE_MS)(); await flush(); });
+  assert.equal(phase(), "error");
+  assert.equal(room.disconnected, true);
+  assert.match(screen.getByRole("alert").textContent, /connection was lost/);
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 1);
+});
+
+test("a heartbeat interruption during SDK recovery waits for the bounded grace", async () => {
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const room = rooms[0];
+  await act(async () => { room.state = "reconnecting"; room.emit(RoomEvent.ConnectionStateChanged); });
+  fetch.mock.mockImplementation(async url => new Response('{}', { status: url.endsWith("heartbeat") ? 503 : 200 }));
+  await act(async () => { await heartbeatCallback(); await flush(); });
+  assert.equal(phase(), "reconnecting");
+  assert.equal(room.disconnected, false);
+  await act(async () => { timeouts.get(voiceContext.RECONNECT_GRACE_MS)(); await flush(); });
+  assert.equal(room.disconnected, true);
+});
+
+test("pagehide closes once with authenticated keepalive; history restoration never starts a new call", async () => {
+  const view = render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  await act(async () => {
+    window.dispatchEvent(new window.Event("pagehide"));
+    window.dispatchEvent(new window.Event("pagehide"));
+    await flush();
+    window.dispatchEvent(new window.PageTransitionEvent("pageshow", { persisted: true }));
+  });
+  const ends = requests.filter(({ url }) => url.endsWith("/end"));
+  assert.equal(ends.length, 1);
+  assert.equal(ends[0].options.keepalive, true);
+  assert.deepEqual(JSON.parse(ends[0].options.body), { sessionId: "synthetic-session-id", sessionKey: "synthetic-control-key" });
+  assert.equal(phase(), "ready");
+  assert.equal(rooms[0].disconnected, true);
+  await act(async () => { view.rerender(React.createElement(VoiceCallControls)); });
+  assert.equal(rooms.length, 1);
+  assert.equal(requests.filter(({ url }) => url === "/api/voice/session").length, 1);
+  assert.equal(window.localStorage.length, 0);
+  assert.equal(window.sessionStorage.length, 0);
+});
+
+test("failed or unauthorized cleanup keeps controls and keys for retry and never reprovisions", async () => {
+  const view = render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  fetch.mock.mockImplementation(async () => new Response('{}', { status: 404 }));
+  await click("End call");
+  assert.equal(phase(), "error");
+  assert.equal(screen.getByRole("button", { name: "Try talking again" }).disabled, true);
+  assert.match(screen.getByRole("alert").textContent, /previous conversation is ending/);
+  await act(async () => { view.rerender(React.createElement("main", null, "Projects")); });
+  assert.ok(screen.getByRole("button", { name: "Retry closing" }));
+  fetch.mock.mockImplementation(async (url, options) => {
+    requests.push({ url, options });
+    return new Response('{"ok":true}');
+  });
+  await click("Retry closing");
+  assert.equal(document.querySelector(".voice-floating"), null);
+  assert.equal(requests.filter(({ url }) => url === "/api/voice/session").length, 1);
+  assert.deepEqual(JSON.parse(requests.at(-1).options.body), { sessionId: "synthetic-session-id", sessionKey: "synthetic-control-key" });
+});
+
+test("ONE_ACTIVE and BUSY prevent repeated provisioning until an explicit retry after a pause", async () => {
+  for (const code of ["ONE_ACTIVE", "BUSY"]) {
+    requests = [];
+    fetch.mock.mockImplementation(async (url, options) => {
+      requests.push({ url, options });
+      return new Response(JSON.stringify({ code }), { status: 409 });
+    });
+    render(React.createElement(VoiceCallControls));
+    await click("Talk to me");
+    assert.equal(phase(), "error");
+    assert.match(screen.getByRole("alert").textContent, code === "ONE_ACTIVE" ? /Another conversation is already active on this network/ : /few conversations/);
+    assert.equal(screen.getByRole("button", { name: "Try talking again" }).disabled, true);
+    await click("Try talking again");
+    assert.equal(requests.length, 1);
+    await act(async () => { timeouts.get(15_000)(); });
+    assert.equal(screen.getByRole("button", { name: "Try talking again" }).disabled, false);
+    assert.equal(requests.length, 1); // No automatic provisioning when the pause expires.
+    cleanup();
+  }
+});
+
+test("ending does not wait indefinitely for a microphone permission prompt", async () => {
+  let resolve;
+  pendingMicrophone = { promise: new Promise(done => { resolve = done; }) };
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  assert.equal(phase(), "connecting");
+  await click("Cancel");
+  assert.equal(phase(), "ready");
+  assert.equal(rooms[0].disconnected, true);
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 1);
+  await act(async () => { resolve(); await flush(); });
+  assert.equal(microphoneStopped, true);
+  assert.equal(phase(), "ready");
+});
+
+test("a connection completing after cancellation is disconnected again without capturing audio", async () => {
+  let resolve;
+  pendingConnect = new Promise(done => { resolve = done; });
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  assert.equal(phase(), "connecting");
+  await click("Cancel");
+  assert.equal(phase(), "ready");
+  await act(async () => { resolve(); await flush(); });
+  assert.equal(rooms[0].state, "disconnected");
+  assert.equal(rooms[0].localParticipant.isMicrophoneEnabled, false);
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 1);
+});
+
+test("the hard deadline is armed before microphone permission and is unchanged by navigation", async () => {
+  pendingMicrophone = { promise: new Promise(() => {}) };
+  const view = render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  const [delay, expire] = [...timeouts.entries()].find(([delay]) => delay > 290_000 && delay <= 300_000);
+  assert.ok(delay <= 300_000);
+  await act(async () => { view.rerender(React.createElement("main", null, "Projects")); });
+  assert.equal([...timeouts.entries()].find(([delay]) => delay > 290_000 && delay <= 300_000)[1], expire);
+  await act(async () => { expire(); await flush(); });
+  assert.equal(rooms[0].disconnected, true);
+  assert.equal(document.querySelector(".voice-floating"), null);
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 1);
+});
+
+test("Strict Mode effect replay leaves one session, timer set and pagehide handler", async () => {
+  const add = mock.method(window, "addEventListener");
+  const remove = mock.method(window, "removeEventListener");
+  render(React.createElement(VoiceCallControls), {
+    wrapper: ({ children }) => React.createElement(StrictMode, null, React.createElement(TestProvider, null, children)),
+  });
+  await act(async () => { await flush(); });
+  await click("Talk to me");
+  assert.equal(phase(), "waiting");
+  assert.equal(rooms.length, 1);
+  assert.equal(intervals.get(30_000), 1);
+  const added = add.mock.calls.filter(({ arguments: args }) => args[0] === "pagehide").length;
+  const removed = remove.mock.calls.filter(({ arguments: args }) => args[0] === "pagehide").length;
+  assert.equal(added - removed, 1);
+  await act(async () => { window.dispatchEvent(new window.Event("pagehide")); await flush(); });
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 1);
+});
+
+test("an ambiguous admission failure after cancellation never claims cleanup succeeded or starts another call", async () => {
+  let reject;
+  pendingCreation = { promise: new Promise((_, fail) => { reject = fail; }) };
+  render(React.createElement(VoiceCallControls));
+  await click("Talk to me");
+  await click("Cancel");
+  await act(async () => { reject(new Error("synthetic lost admission response")); await flush(); });
+  assert.equal(phase(), "error");
+  assert.match(screen.getByRole("alert").textContent, /If a conversation was created, it may still be closing/);
+  assert.equal(screen.getByRole("button", { name: "Try talking again" }).disabled, true);
+  assert.equal(requests.filter(({ url }) => url === "/api/voice/session").length, 1);
+  assert.equal(requests.filter(({ url }) => url.endsWith("/end")).length, 0);
+  assert.equal(rooms[0].disconnected, true);
 });

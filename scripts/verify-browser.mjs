@@ -4,6 +4,9 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { homedir } from "node:os";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { loadTypeScript } from "./test-typescript.mjs";
 
 // Dependency-free Chromium acceptance checks, using the browser's DevTools protocol.
 // Override PORTFOLIO_CHROME for your local Chrome/Chromium executable.
@@ -461,6 +464,42 @@ try {
     }
   }
 
+  // A real App Router round trip must retain the root-owned widget element.
+  // No call is started; paid transport/media behavior is tested with mocks.
+  await evaluate(`void (window.__voiceRootProbe = document.querySelector('.voice-verification-host'))`);
+  await click('.voice-privacy-link[href="/privacy"]');
+  await waitFor(`location.pathname === '/privacy' && document.querySelector('.privacy-page')`);
+  assert.equal(await evaluate(`document.querySelector('.voice-verification-host') === window.__voiceRootProbe`), true);
+  await click('.privacy-page > a[href="/"]');
+  await waitFor(`location.pathname === '/' && document.querySelector('.voice-call-start')`);
+  assert.equal(await evaluate(`document.querySelector('.voice-verification-host') === window.__voiceRootProbe`), true);
+  assert.equal(await evaluate(`document.querySelector('.voice-call').dataset.voicePhase`), "ready");
+
+  // Render the real dock component with synthetic state for responsive visual QA.
+  // This never constructs a LiveKit room or requests a voice session.
+  const { default: PreviewDock } = loadTypeScript("../components/FloatingVoiceControls.tsx", {
+    "../context/VoiceSessionContext": { useVoiceSession: () => ({ phase: "speaking", muted: false,
+      error: "", audioBlocked: false, cleanupPending: false, muteBusy: false,
+      remainingSeconds: 245, inlineVisible: false, endCall() {}, toggleMute() {}, enableAudio() {} }) },
+  });
+  const dockMarkup = renderToStaticMarkup(React.createElement(PreviewDock));
+  await evaluate(`document.body.insertAdjacentHTML('beforeend', ${JSON.stringify(dockMarkup)})`);
+  for (const [width, height] of [[360, 740], [390, 844], [667, 375], [1440, 1000]]) {
+    await cdp("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 768 });
+    assert.equal(await evaluate(`(() => {
+      const dock = document.querySelector('.voice-floating');
+      const rect = dock.getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight &&
+        [...dock.querySelectorAll('button')].every(button => button.getBoundingClientRect().height >= 44) &&
+        dock.textContent.includes('Speaking') && dock.textContent.includes('4:05');
+    })()`), true, `Floating controls fit and remain usable at ${width}x${height}`);
+    if ([390, 1440].includes(width)) {
+      const shot = await cdp("Page.captureScreenshot", { format: "png" });
+      await writeFile(`.qa/voice-floating-${width}.png`, Buffer.from(shot.data, "base64"));
+    }
+  }
+  await evaluate(`document.querySelector('.voice-floating').remove(); delete window.__voiceRootProbe`);
+
   await cdp("Accessibility.enable");
   const accessibility = await cdp("Accessibility.getFullAXTree");
   const unnamed = accessibility.nodes.filter(
@@ -510,6 +549,8 @@ try {
           "responsive layouts",
           "reduced motion",
           "server-rendered no-JS content",
+          "persistent root across client-side privacy navigation",
+          "floating voice controls with synthetic state",
         ],
         errors,
       },
