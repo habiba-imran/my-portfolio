@@ -39,7 +39,7 @@ test("profile grounds biography, skills, projects, experience and education in r
   assert.match(prompt, /Use conversation history/);
   assert.match(prompt, /do not have that specific detail/);
   assert.match(knowledge.frequentlyAsked["What's her favorite movie?"], /not documented/);
-  assert.equal(knowledge.sourceConflicts.length, 3);
+  assert.equal(knowledge.sourceConflicts.length, 0);
   assert.match(prompt, /explicitly explain which source says what/);
   assert.doesNotMatch(prompt, /\+92[\d -]{8,}|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|\b(?:gsk_|sk_live_)[A-Za-z0-9]{12,}/);
 });

@@ -114,7 +114,7 @@ export const projects = [
     name: "AIDRA",
     category: "Full stack / Disaster response",
     action: "Explore demo",
-    title: "AIDRA - AI Disaster Response",
+    title: "AIDRA - Adaptive Intelligence Disaster Response Agent",
     description:
       "Hybrid AI disaster-response simulator for urban triage, routing, and resource allocation, combining real-time simulation, ML predictions, and dynamic pathfinding.",
     tags: ["React", "TypeScript", "AI/ML", "Algorithms"],
@@ -225,32 +225,32 @@ export const recognition = [
     detail: "1st in 5th Sem · 2nd in 3rd Sem · 3rd in 2nd Sem",
   },
   { title: "PM’s Laptop Scheme 2025", detail: "Selected Recipient · Phase IV" },
-  { title: "IBM watsonx", detail: "Technical Sales Intermediate" },
+  { title: "IBM watsonx Orchestrate & Assistant", detail: "Technical Sales Intermediate" },
 ];
 
 export const experiences = [
   {
     id: 1,
-    title: "Full Stack Developer",
+    title: "Software Developer (Promoted from AI Intern)",
     company: "Finova Solutions",
-    period: "April 2026 - Ongoing",
+    period: "April 2026 - Present",
     description:
       "Built full-stack SaaS features across dashboards, backend APIs, and configuration workflows for AI-powered voice and call evaluation products.",
   },
   {
     id: 2,
-    title: "Intern",
+    title: "AI Intern",
     company: "Finova Solutions",
-    period: "February 2026 - April 2026",
+    period: "February 2026 - March 2026",
     description:
       "Developed a production voice AI pipeline for phone-call automation, connecting call input, LLM processing, and TTS output.",
   },
   {
     id: 3,
-    title: "Intern",
+    title: "AI Intern",
     company: "SPS-NASTP",
-    period: "July 2025 - Sept 2025",
+    period: "June 2025 - July 2025",
     description:
-      "Built GreenKeyper, a conversational AI app using IBM watsonx Assistant, with chatbot logic, assistant configuration, and interaction-flow design.",
+      "Configured chatbot dialogue flows and IBM watsonx Assistant workflows for the GreenKeyper application.",
   },
 ];
